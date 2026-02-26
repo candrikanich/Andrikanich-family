@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, computed, onMounted } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useDocumentsStore } from '@/stores/documents'
 import { supabase } from '@/services/supabase'
 import type { ExtractionResult, EducationType } from '@/types'
-
-// TODO: import RelationshipSuggestions from '@/components/RelationshipSuggestions.vue'
+import RelationshipSuggestions from '@/components/RelationshipSuggestions.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -143,15 +142,14 @@ function removeMilitary(i: number)   { militaryService.value.splice(i, 1) }
 
 // ─── Relationship suggestions derived from mentionedNames ────────────────────
 
-// TODO Step 7: uncomment and pass to RelationshipSuggestions
-// const suggestions = computed(() =>
-//   (result?.mentionedNames ?? []).map(m => ({
-//     mentionedName:    m.name,
-//     relationshipType: m.relationshipType,
-//     mentionContext:   m.mentionContext,
-//     uncertain:        m.uncertain,
-//   }))
-// )
+const suggestionsFromResult = computed(() =>
+  (result?.mentionedNames ?? []).map(m => ({
+    mentionedName:    m.name,
+    relationshipType: m.relationshipType,
+    mentionContext:   m.mentionContext,
+    uncertain:        m.uncertain,
+  }))
+)
 
 // ─── Commit ───────────────────────────────────────────────────────────────────
 
@@ -603,11 +601,17 @@ onBeforeRouteLeave(() => {
               </RouterLink>
             </div>
 
-            <!-- Relationship Suggestions placeholder -->
+            <!-- Relationship Suggestions -->
             <div class="card p-6">
               <h2 class="font-display text-xl text-walnut mb-4">Relationship Suggestions</h2>
-              <!-- <RelationshipSuggestions :suggestions="suggestions" :personId="personId" /> -->
-              <div class="text-sm text-stone-500">Relationship suggestions will appear here (Step 7)</div>
+              <RelationshipSuggestions
+                v-if="personId"
+                :suggestions="suggestionsFromResult"
+                :personId="personId"
+              />
+              <p v-else class="text-sm text-walnut-muted italic">
+                No person linked — relationship suggestions unavailable.
+              </p>
             </div>
           </div>
 
