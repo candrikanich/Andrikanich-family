@@ -44,46 +44,75 @@ export function useEducation(personId: string) {
   }
 
   async function add(input: EducationInput): Promise<Education> {
-    const { data, error: err } = await supabase
-      .from('education')
-      .insert({
-        person_id: personId, institution: input.institution,
-        institution_type: input.institutionType,
-        location: input.location ?? null,
-        start_year: input.startYear ?? null,
-        end_year: input.endYear ?? null,
-        graduated: input.graduated ?? null,
-        notes: input.notes ?? null,
-      })
-      .select().single()
-    if (err) throw err
-    const education = mapEducation(data)
-    items.value = [...items.value, education]
-    return education
+    isLoading.value = true
+    error.value = null
+    try {
+      const { data, error: err } = await supabase
+        .from('education')
+        .insert({
+          person_id: personId, institution: input.institution,
+          institution_type: input.institutionType,
+          location: input.location ?? null,
+          start_year: input.startYear ?? null,
+          end_year: input.endYear ?? null,
+          graduated: input.graduated ?? null,
+          notes: input.notes ?? null,
+        })
+        .select().single()
+      if (err) throw err
+      if (!data) throw new Error('No data returned from database')
+      const education = mapEducation(data)
+      items.value = [...items.value, education]
+      return education
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   async function update(id: string, input: Partial<EducationInput>): Promise<Education> {
-    const patch: Record<string, unknown> = {}
-    if (input.institution     !== undefined) patch['institution']      = input.institution
-    if (input.institutionType !== undefined) patch['institution_type'] = input.institutionType
-    if (input.location        !== undefined) patch['location']         = input.location
-    if (input.startYear       !== undefined) patch['start_year']       = input.startYear
-    if (input.endYear         !== undefined) patch['end_year']         = input.endYear
-    if (input.graduated       !== undefined) patch['graduated']        = input.graduated
-    if (input.notes           !== undefined) patch['notes']            = input.notes
+    isLoading.value = true
+    error.value = null
+    try {
+      const patch: Record<string, unknown> = {}
+      if (input.institution     !== undefined) patch['institution']      = input.institution
+      if (input.institutionType !== undefined) patch['institution_type'] = input.institutionType
+      if (input.location        !== undefined) patch['location']         = input.location
+      if (input.startYear       !== undefined) patch['start_year']       = input.startYear
+      if (input.endYear         !== undefined) patch['end_year']         = input.endYear
+      if (input.graduated       !== undefined) patch['graduated']        = input.graduated
+      if (input.notes           !== undefined) patch['notes']            = input.notes
 
-    const { data, error: err } = await supabase
-      .from('education').update(patch).eq('id', id).select().single()
-    if (err) throw err
-    const education = mapEducation(data)
-    items.value = items.value.map(e => e.id === id ? education : e)
-    return education
+      const { data, error: err } = await supabase
+        .from('education').update(patch).eq('id', id).select().single()
+      if (err) throw err
+      if (!data) throw new Error('No data returned from database')
+      const education = mapEducation(data)
+      items.value = items.value.map(e => e.id === id ? education : e)
+      return education
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   async function remove(id: string): Promise<void> {
-    const { error: err } = await supabase.from('education').delete().eq('id', id)
-    if (err) throw err
-    items.value = items.value.filter(e => e.id !== id)
+    isLoading.value = true
+    error.value = null
+    try {
+      const { error: err } = await supabase.from('education').delete().eq('id', id)
+      if (err) throw err
+      items.value = items.value.filter(e => e.id !== id)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   return { items, isLoading, error, fetch, add, update, remove }

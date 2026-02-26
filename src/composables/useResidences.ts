@@ -41,42 +41,71 @@ export function useResidences(personId: string) {
   }
 
   async function add(input: ResidenceInput): Promise<Residence> {
-    const maxOrder = items.value.reduce((m, r) => Math.max(m, r.sortOrder), 0)
-    const { data, error: err } = await supabase
-      .from('residences')
-      .insert({
-        person_id: personId, location: input.location,
-        from_date: input.fromDate ?? null, to_date: input.toDate ?? null,
-        is_current: input.isCurrent ?? false,
-        sort_order: input.sortOrder ?? maxOrder + 1,
-      })
-      .select().single()
-    if (err) throw err
-    const residence = mapResidence(data)
-    items.value = [...items.value, residence]
-    return residence
+    isLoading.value = true
+    error.value = null
+    try {
+      const maxOrder = items.value.reduce((m, r) => Math.max(m, r.sortOrder), 0)
+      const { data, error: err } = await supabase
+        .from('residences')
+        .insert({
+          person_id: personId, location: input.location,
+          from_date: input.fromDate ?? null, to_date: input.toDate ?? null,
+          is_current: input.isCurrent ?? false,
+          sort_order: input.sortOrder ?? maxOrder + 1,
+        })
+        .select().single()
+      if (err) throw err
+      if (!data) throw new Error('No data returned from database')
+      const residence = mapResidence(data)
+      items.value = [...items.value, residence]
+      return residence
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   async function update(id: string, input: Partial<ResidenceInput>): Promise<Residence> {
-    const patch: Record<string, unknown> = {}
-    if (input.location  !== undefined) patch['location']   = input.location
-    if (input.fromDate  !== undefined) patch['from_date']  = input.fromDate
-    if (input.toDate    !== undefined) patch['to_date']    = input.toDate
-    if (input.isCurrent !== undefined) patch['is_current'] = input.isCurrent
-    if (input.sortOrder !== undefined) patch['sort_order'] = input.sortOrder
+    isLoading.value = true
+    error.value = null
+    try {
+      const patch: Record<string, unknown> = {}
+      if (input.location  !== undefined) patch['location']   = input.location
+      if (input.fromDate  !== undefined) patch['from_date']  = input.fromDate
+      if (input.toDate    !== undefined) patch['to_date']    = input.toDate
+      if (input.isCurrent !== undefined) patch['is_current'] = input.isCurrent
+      if (input.sortOrder !== undefined) patch['sort_order'] = input.sortOrder
 
-    const { data, error: err } = await supabase
-      .from('residences').update(patch).eq('id', id).select().single()
-    if (err) throw err
-    const residence = mapResidence(data)
-    items.value = items.value.map(r => r.id === id ? residence : r)
-    return residence
+      const { data, error: err } = await supabase
+        .from('residences').update(patch).eq('id', id).select().single()
+      if (err) throw err
+      if (!data) throw new Error('No data returned from database')
+      const residence = mapResidence(data)
+      items.value = items.value.map(r => r.id === id ? residence : r)
+      return residence
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   async function remove(id: string): Promise<void> {
-    const { error: err } = await supabase.from('residences').delete().eq('id', id)
-    if (err) throw err
-    items.value = items.value.filter(r => r.id !== id)
+    isLoading.value = true
+    error.value = null
+    try {
+      const { error: err } = await supabase.from('residences').delete().eq('id', id)
+      if (err) throw err
+      items.value = items.value.filter(r => r.id !== id)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   return { items, isLoading, error, fetch, add, update, remove }

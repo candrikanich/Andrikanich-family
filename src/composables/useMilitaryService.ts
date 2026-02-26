@@ -41,43 +41,72 @@ export function useMilitaryService(personId: string) {
   }
 
   async function add(input: MilitaryServiceInput): Promise<MilitaryService> {
-    const { data, error: err } = await supabase
-      .from('military_service')
-      .insert({
-        person_id: personId,
-        branch: input.branch ?? null,
-        rank: input.rank ?? null,
-        from_date: input.fromDate ?? null,
-        to_date: input.toDate ?? null,
-        notes: input.notes ?? null,
-      })
-      .select().single()
-    if (err) throw err
-    const service = mapMilitary(data)
-    items.value = [...items.value, service]
-    return service
+    isLoading.value = true
+    error.value = null
+    try {
+      const { data, error: err } = await supabase
+        .from('military_service')
+        .insert({
+          person_id: personId,
+          branch: input.branch ?? null,
+          rank: input.rank ?? null,
+          from_date: input.fromDate ?? null,
+          to_date: input.toDate ?? null,
+          notes: input.notes ?? null,
+        })
+        .select().single()
+      if (err) throw err
+      if (!data) throw new Error('No data returned from database')
+      const service = mapMilitary(data)
+      items.value = [...items.value, service]
+      return service
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   async function update(id: string, input: Partial<MilitaryServiceInput>): Promise<MilitaryService> {
-    const patch: Record<string, unknown> = {}
-    if (input.branch   !== undefined) patch['branch']    = input.branch
-    if (input.rank     !== undefined) patch['rank']      = input.rank
-    if (input.fromDate !== undefined) patch['from_date'] = input.fromDate
-    if (input.toDate   !== undefined) patch['to_date']   = input.toDate
-    if (input.notes    !== undefined) patch['notes']     = input.notes
+    isLoading.value = true
+    error.value = null
+    try {
+      const patch: Record<string, unknown> = {}
+      if (input.branch   !== undefined) patch['branch']    = input.branch
+      if (input.rank     !== undefined) patch['rank']      = input.rank
+      if (input.fromDate !== undefined) patch['from_date'] = input.fromDate
+      if (input.toDate   !== undefined) patch['to_date']   = input.toDate
+      if (input.notes    !== undefined) patch['notes']     = input.notes
 
-    const { data, error: err } = await supabase
-      .from('military_service').update(patch).eq('id', id).select().single()
-    if (err) throw err
-    const service = mapMilitary(data)
-    items.value = items.value.map(s => s.id === id ? service : s)
-    return service
+      const { data, error: err } = await supabase
+        .from('military_service').update(patch).eq('id', id).select().single()
+      if (err) throw err
+      if (!data) throw new Error('No data returned from database')
+      const service = mapMilitary(data)
+      items.value = items.value.map(s => s.id === id ? service : s)
+      return service
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   async function remove(id: string): Promise<void> {
-    const { error: err } = await supabase.from('military_service').delete().eq('id', id)
-    if (err) throw err
-    items.value = items.value.filter(s => s.id !== id)
+    isLoading.value = true
+    error.value = null
+    try {
+      const { error: err } = await supabase.from('military_service').delete().eq('id', id)
+      if (err) throw err
+      items.value = items.value.filter(s => s.id !== id)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
+      throw err
+    } finally {
+      isLoading.value = false
+    }
   }
 
   return { items, isLoading, error, fetch, add, update, remove }
