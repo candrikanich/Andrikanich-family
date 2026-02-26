@@ -28,6 +28,10 @@ async function handleFileSelected(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) return
+  if (file.size > 10 * 1024 * 1024) {
+    uploadError.value = 'Photo must be smaller than 10 MB'
+    return
+  }
   uploadError.value = null
   try {
     await media.upload(file, caption.value || undefined, yearApprox.value !== '' ? Number(yearApprox.value) : undefined)

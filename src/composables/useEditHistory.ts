@@ -31,6 +31,7 @@ export function useEditHistory(personId: string) {
         .from('edit_history')
         .select('*')
         .eq('record_id', personId)
+        .eq('table_name', 'people')
         .order('changed_at', { ascending: false })
         .limit(50)
       if (dbError) throw dbError

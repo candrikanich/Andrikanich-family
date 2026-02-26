@@ -124,6 +124,11 @@ export function useMedia(personId: string) {
       if (dbError) throw dbError
 
       await load()
+
+      // If no photos remain, clear the primary photo reference on the person
+      if (photos.value.length === 0) {
+        await supabase.from('people').update({ primary_photo_id: null }).eq('id', personId)
+      }
     } catch (err) {
       error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
       throw err
