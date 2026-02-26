@@ -55,6 +55,18 @@ const router = createRouter({
       component: () => import('@/views/PersonView.vue'),
       meta: { requiresApproved: true },
     },
+    {
+      path: '/upload',
+      name: 'upload',
+      component: () => import('@/views/UploadView.vue'),
+      meta: { requiresApproved: true },
+    },
+    {
+      path: '/documents/:id/review',
+      name: 'document-review',
+      component: () => import('@/views/DocumentReviewView.vue'),
+      meta: { requiresApproved: true },
+    },
 
     // ─── Admin only ───────────────────────────────────────────────────────
     {

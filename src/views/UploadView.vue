@@ -129,7 +129,7 @@ async function handleUpload() {
     router.push({
       name: 'document-review',
       params: { id: documentId },
-      state: { result },
+      state: { result, personId: selectedPerson.value.id },
     })
   } catch {
     // documentsStore.error is set in the store
