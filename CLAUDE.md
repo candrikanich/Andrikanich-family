@@ -79,6 +79,21 @@ tests/
 - All tests must pass before committing
 - TypeScript strict mode enabled
 
+## Implementation Roadmap
+
+### Phase 1: Setup & Infrastructure
+1. Create Supabase Account and project
+2. Set up database with SQL schema
+3. Start development server and verify setup
+
+### Phase 2: Core Features (Priority Order)
+4. Build auth views (login/signup)
+5. Build person card components
+6. Build family tree visualization
+7. Build search & filter functionality
+8. Build document upload feature
+9. Build PDF export feature
+
 ## Important
 
 - Store Supabase credentials in `.env.local` (never commit)
