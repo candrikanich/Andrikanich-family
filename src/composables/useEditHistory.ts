@@ -44,8 +44,14 @@ export function useEditHistory(personId: string) {
   }
 
   async function restore(entry: EditHistoryEntry): Promise<void> {
+    if (entry.oldValue === null) {
+      throw new Error('Cannot restore a record creation entry — no previous value exists.')
+    }
     error.value = null
     try {
+      // Cast required: Supabase typed client does not accept a dynamic table name.
+      // Runtime behaviour is correct — entry.tableName comes from the DB trigger,
+      // so it will always be a valid table name for the originating table.
       const { error: dbError } = await supabase
         .from(entry.tableName as 'people')
         .update({ [entry.fieldName]: entry.oldValue })

@@ -60,5 +60,27 @@ describe('useEditHistory', () => {
     })
 
     expect(mockFrom).toHaveBeenCalledWith('people')
+    expect(mockFrom).toHaveBeenCalledWith('edit_history')
+  })
+
+  it('restore sets error when update fails', async () => {
+    mockChain.eq.mockResolvedValueOnce({ error: { message: 'update failed' } })
+
+    const eh = useEditHistory('p1')
+    await expect(eh.restore({
+      id: 'h1', tableName: 'people', recordId: 'p1',
+      fieldName: 'biography', oldValue: 'old bio', newValue: 'new bio',
+      changedBy: 'user-1', changedAt: '2026-01-01T00:00:00Z',
+    })).rejects.toThrow('update failed')
+    expect(eh.error.value).toBe('update failed')
+  })
+
+  it('restore throws when oldValue is null (_created entry)', async () => {
+    const eh = useEditHistory('p1')
+    await expect(eh.restore({
+      id: 'h1', tableName: 'people', recordId: 'p1',
+      fieldName: '_created', oldValue: null, newValue: {},
+      changedBy: null, changedAt: '2026-01-01T00:00:00Z',
+    })).rejects.toThrow('Cannot restore a record creation entry')
   })
 })
