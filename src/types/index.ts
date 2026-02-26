@@ -202,3 +202,37 @@ export interface PeopleSearchParams {
   birthYearMax?: number
   location?: string
 }
+
+// ─── Tree ─────────────────────────────────────────────────────────────────────
+
+export interface TreePerson {
+  id: string
+  firstName: string
+  lastName: string
+  birthSurname: string | null
+  nickname: string | null
+  birthDate: string | null
+  deathDate: string | null
+  primaryPhotoId: string | null
+}
+
+export interface TreeParentChildEdge {
+  id: string
+  parentId: string
+  childId: string
+  confirmed: boolean
+}
+
+export interface TreeMarriageEdge {
+  id: string
+  personAId: string
+  personBId: string
+  marriageDate: string | null
+}
+
+export interface TreeSubgraph {
+  rootId: string
+  people: TreePerson[]                 // all people in the subgraph (deduplicated)
+  parentChildEdges: TreeParentChildEdge[]
+  marriageEdges: TreeMarriageEdge[]
+}
