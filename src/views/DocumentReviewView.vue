@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, reactive, onMounted } from 'vue'
 import { useRoute, useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useDocumentsStore } from '@/stores/documents'
+import { supabase } from '@/services/supabase'
 import type { ExtractionResult, EducationType } from '@/types'
 
 // TODO: import RelationshipSuggestions from '@/components/RelationshipSuggestions.vue'
@@ -18,6 +19,32 @@ const personId = routeState?.personId ?? null
 const committed = ref(false)
 const committing = ref(false)
 const commitError = ref<string | null>(null)
+
+// ─── Document preview ─────────────────────────────────────────────────────────
+
+type PreviewState = 'loading' | 'ready' | 'unavailable' | 'error'
+
+const previewState = ref<PreviewState>('loading')
+const previewUrl = ref<string | null>(null)
+const previewMimeType = ref<string | null>(null)
+
+onMounted(async () => {
+  if (!personId) { previewState.value = 'unavailable'; return }
+  try {
+    await documentsStore.fetchDocuments(personId)
+    const doc = documentsStore.documents.find(d => d.id === documentId)
+    if (!doc) { previewState.value = 'unavailable'; return }
+    previewMimeType.value = doc.mimeType
+    const { data, error } = await supabase.storage
+      .from('documents')
+      .createSignedUrl(doc.storagePath, 3600)
+    if (error || !data?.signedUrl) { previewState.value = 'error'; return }
+    previewUrl.value = data.signedUrl
+    previewState.value = 'ready'
+  } catch {
+    previewState.value = 'error'
+  }
+})
 
 // ─── Editable state initialised from extraction result ────────────────────────
 
@@ -116,14 +143,15 @@ function removeMilitary(i: number)   { militaryService.value.splice(i, 1) }
 
 // ─── Relationship suggestions derived from mentionedNames ────────────────────
 
-const suggestions = computed(() =>
-  (result?.mentionedNames ?? []).map(m => ({
-    mentionedName:    m.name,
-    relationshipType: m.relationshipType,
-    mentionContext:   m.mentionContext,
-    uncertain:        m.uncertain,
-  }))
-)
+// TODO Step 7: uncomment and pass to RelationshipSuggestions
+// const suggestions = computed(() =>
+//   (result?.mentionedNames ?? []).map(m => ({
+//     mentionedName:    m.name,
+//     relationshipType: m.relationshipType,
+//     mentionContext:   m.mentionContext,
+//     uncertain:        m.uncertain,
+//   }))
+// )
 
 // ─── Commit ───────────────────────────────────────────────────────────────────
 
@@ -495,8 +523,52 @@ onBeforeRouteLeave(() => {
 
           </div>
 
-          <!-- ── Right column / placeholder ─────────────────────────────────── -->
+          <!-- ── Right column ────────────────────────────────────────────────── -->
           <div class="space-y-6">
+
+            <!-- Document Preview -->
+            <div class="card p-6">
+              <h2 class="font-display text-xl text-walnut mb-4">Document Preview</h2>
+
+              <div v-if="previewState === 'loading'" class="text-sm text-walnut-muted italic">
+                Loading preview…
+              </div>
+
+              <div v-else-if="previewState === 'error'" class="text-sm text-walnut-muted italic">
+                Preview unavailable.
+              </div>
+
+              <div v-else-if="previewState === 'unavailable'" class="text-sm text-walnut-muted italic">
+                Preview unavailable.
+              </div>
+
+              <template v-else-if="previewState === 'ready' && previewUrl">
+                <!-- PDF: inline iframe -->
+                <template v-if="previewMimeType === 'application/pdf'">
+                  <iframe
+                    :src="previewUrl"
+                    class="w-full h-96 rounded border border-parchment"
+                    title="Document preview"
+                  />
+                </template>
+
+                <!-- Word doc: download link only -->
+                <template v-else>
+                  <p class="text-sm text-walnut-muted mb-3">
+                    Document preview not available for Word files. Open the original document for reference.
+                  </p>
+                  <a
+                    :href="previewUrl"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="btn-secondary text-sm inline-block"
+                  >
+                    Download Original Document
+                  </a>
+                </template>
+              </template>
+            </div>
+
             <div class="card p-6 lg:sticky lg:top-8">
               <h2 class="font-display text-xl text-walnut mb-4">Commit Changes</h2>
 

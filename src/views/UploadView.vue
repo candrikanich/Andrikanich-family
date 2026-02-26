@@ -43,6 +43,10 @@ function clearSelection() {
   showDropdown.value = false
 }
 
+function onSearchBlur() {
+  setTimeout(() => { showDropdown.value = false }, 150)
+}
+
 watch(searchQuery, (val) => {
   if (!val) clearSelection()
 })
@@ -78,7 +82,7 @@ function validateFile(file: File): string | null {
 function handleFiles(files: FileList | null) {
   fileError.value = null
   if (!files || files.length === 0) return
-  const file = files[0]
+  const file = files[0] as File
   const err = validateFile(file)
   if (err) {
     fileError.value = err
@@ -129,7 +133,10 @@ async function handleUpload() {
     router.push({
       name: 'document-review',
       params: { id: documentId },
-      state: { result, personId: selectedPerson.value.id },
+      // JSON round-trip produces a plain object satisfying HistoryState's index
+      // signature requirement; ExtractionResult is fully JSON-serializable
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      state: { result: JSON.parse(JSON.stringify(result)), personId: selectedPerson.value.id },
     })
   } catch {
     // documentsStore.error is set in the store
@@ -159,7 +166,7 @@ async function handleUpload() {
               :disabled="isProcessing"
               autocomplete="off"
               @input="onSearchInput"
-              @blur="() => setTimeout(() => { showDropdown = false }, 150)"
+              @blur="onSearchBlur"
               @focus="() => { if (searchQuery && !selectedPerson) showDropdown = peopleStore.list.length > 0 }"
             />
             <button
