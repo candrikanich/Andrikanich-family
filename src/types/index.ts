@@ -236,3 +236,76 @@ export interface TreeSubgraph {
   parentChildEdges: TreeParentChildEdge[]
   marriageEdges: TreeMarriageEdge[]
 }
+
+// ─── Phase 4 — Document AI Pipeline ──────────────────────────────────────────
+
+export interface ExtractedField<T = string> {
+  value: T
+  uncertain: boolean
+}
+
+export interface ExtractionResult {
+  person: {
+    firstName: ExtractedField
+    lastName: ExtractedField
+    birthSurname?: ExtractedField
+    nickname?: ExtractedField
+    suffix?: ExtractedField
+    nameVariants?: string[]
+    birthDate?: ExtractedField
+    birthPlace?: ExtractedField
+    deathDate?: ExtractedField
+    deathPlace?: ExtractedField
+    burialPlace?: ExtractedField
+    biography?: string
+    notes?: string
+  }
+  residences: Array<{
+    location: string
+    fromDate?: string
+    toDate?: string
+    isCurrent: boolean
+  }>
+  education: Array<{
+    institution: string
+    institutionType: EducationType
+    startYear?: number
+    endYear?: number
+    graduated?: boolean
+  }>
+  occupations: Array<{
+    employer?: string
+    title?: string
+    fromDate?: string
+    toDate?: string
+    isCurrent: boolean
+  }>
+  militaryService: Array<{
+    branch: string
+    rank?: string
+    fromDate?: string
+    toDate?: string
+    notes?: string
+  }>
+  marriages: Array<{
+    spouseName: string
+    marriageDate?: ExtractedField
+    marriagePlace?: ExtractedField
+    endDate?: string
+    endReason?: MarriageEndReason
+  }>
+  mentionedNames: Array<{
+    name: string
+    relationshipType: 'parent' | 'child' | 'sibling' | 'spouse'
+    mentionContext: string
+    uncertain: boolean
+  }>
+}
+
+export interface RelationshipSuggestion {
+  mentionedName: string
+  relationshipType: 'parent' | 'child' | 'sibling' | 'spouse'
+  mentionContext: string
+  uncertain: boolean
+  matchedPerson?: PersonSummary
+}
