@@ -6,6 +6,10 @@ import type { Database } from '@/types/database'
 
 type PersonRow = Database['public']['Tables']['people']['Row']
 
+function sanitizeFilter(s: string): string {
+  return s.replace(/[,()]/g, ' ').trim()
+}
+
 function mapPerson(row: PersonRow): Person {
   return {
     id: row.id,
@@ -42,7 +46,7 @@ export const usePeopleStore = defineStore('people', () => {
       let query = supabase.from('people').select('*').order('last_name', { ascending: true })
 
       if (params?.query) {
-        const q = `%${params.query}%`
+        const q = `%${sanitizeFilter(params.query)}%`
         query = query.or(`first_name.ilike.${q},last_name.ilike.${q},birth_surname.ilike.${q},nickname.ilike.${q}`)
       }
       if (params?.birthYearMin) {
@@ -52,7 +56,7 @@ export const usePeopleStore = defineStore('people', () => {
         query = query.lte('birth_date', `${params.birthYearMax}-12-31`)
       }
       if (params?.location) {
-        const loc = `%${params.location}%`
+        const loc = `%${sanitizeFilter(params.location)}%`
         query = query.or(`birth_place.ilike.${loc},death_place.ilike.${loc}`)
       }
 

@@ -125,4 +125,30 @@ describe('usePeopleStore', () => {
     await store.deletePerson('uuid-1')
     expect(store.list).toEqual([])
   })
+
+  it('fetchPeople applies name query filter', async () => {
+    mockChain.or.mockResolvedValueOnce({ data: [PERSON_ROW], error: null })
+    const store = usePeopleStore()
+    await store.fetchPeople({ query: 'John' })
+    expect(store.list).toEqual([PERSON])
+    expect(mockChain.or).toHaveBeenCalledWith(expect.stringContaining('first_name.ilike.%John%'))
+  })
+
+  it('fetchPeople applies birth year range filter', async () => {
+    mockChain.lte.mockResolvedValueOnce({ data: [PERSON_ROW], error: null })
+    const store = usePeopleStore()
+    await store.fetchPeople({ birthYearMin: 1900, birthYearMax: 1950 })
+    expect(store.list).toEqual([PERSON])
+    expect(mockChain.gte).toHaveBeenCalledWith('birth_date', '1900-01-01')
+    expect(mockChain.lte).toHaveBeenCalledWith('birth_date', '1950-12-31')
+  })
+
+  it('sanitizeFilter strips commas and parentheses from user input', async () => {
+    mockChain.or.mockResolvedValueOnce({ data: [], error: null })
+    const store = usePeopleStore()
+    await store.fetchPeople({ query: 'Smith, Jr' })
+    const orCall = (mockChain.or as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+    expect(orCall).not.toContain('Smith, Jr')
+    expect(orCall).toContain('Smith')
+  })
 })
