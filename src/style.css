@@ -43,6 +43,10 @@
   .card {
     @apply bg-white border border-parchment rounded-lg shadow-sm;
   }
+  .input {
+    @apply border border-parchment rounded px-3 py-2 text-sm text-walnut bg-cream
+           placeholder:text-walnut/40 focus:outline-none focus:border-walnut/50 transition-colors;
+  }
   .form-input {
     @apply w-full px-3 py-2 border border-parchment rounded bg-white text-walnut placeholder-walnut-muted focus:outline-none focus:ring-2 focus:ring-walnut-muted focus:border-walnut transition-colors;
   }
