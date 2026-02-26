@@ -1,7 +1,7 @@
 -- ============================================================
 -- Genealogy Tracker — Edit History Triggers Migration 005
 -- Run in: Supabase Dashboard → SQL Editor → New Query
--- Run AFTER 001_schema.sql
+-- Run AFTER 002_rls_policies.sql
 -- ============================================================
 
 -- ─── RLS policies for edit_history ───────────────────────────────────────────
@@ -10,6 +10,12 @@
 
 ALTER TABLE edit_history ENABLE ROW LEVEL SECURITY;
 
+-- Drop policies created by 002_rls_policies.sql that this migration supersedes:
+--   "edit_history: approved read" was too permissive (viewers could read audit log).
+--   "edit_history: editor insert" allowed direct client inserts; inserts must only
+--   come from the SECURITY DEFINER trigger function.
+DROP POLICY IF EXISTS "edit_history: approved read" ON edit_history;
+DROP POLICY IF EXISTS "edit_history: editor insert" ON edit_history;
 DROP POLICY IF EXISTS "edit_history: editors can read" ON edit_history;
 CREATE POLICY "edit_history: editors can read"
   ON edit_history FOR SELECT
@@ -40,14 +46,21 @@ BEGIN
         INSERT INTO edit_history
           (table_name, record_id, field_name, old_value, new_value, changed_by)
         VALUES
+          -- auth.uid() returns NULL when run via service-role key or the SQL Editor
+          -- (no JWT context); changed_by = NULL in those cases is expected behavior.
           (TG_TABLE_NAME, NEW.id, col, old_json->col, new_json->col, auth.uid());
       END IF;
     END LOOP;
 
   ELSIF TG_OP = 'INSERT' THEN
+    -- The _created row stores the full row snapshot in new_value (including id,
+    -- created_at, updated_at) as an intentional full snapshot, unlike UPDATE diffs
+    -- which strip those metadata fields to focus on meaningful changes.
     INSERT INTO edit_history
       (table_name, record_id, field_name, old_value, new_value, changed_by)
     VALUES
+      -- auth.uid() returns NULL when run via service-role key or the SQL Editor
+      -- (no JWT context); changed_by = NULL in those cases is expected behavior.
       (TG_TABLE_NAME, NEW.id, '_created', NULL, to_jsonb(NEW), auth.uid());
   END IF;
 
