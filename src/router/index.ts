@@ -1,5 +1,16 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import type { RouteMeta } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresGuest?: boolean
+    requiresAuth?: boolean
+    requiresApproved?: boolean
+    requiresEditor?: boolean
+    requiresAdmin?: boolean
+  }
+}
 
 const router = createRouter({
   history: createWebHistory(),
@@ -59,13 +70,13 @@ const router = createRouter({
       path: '/upload',
       name: 'upload',
       component: () => import('@/views/UploadView.vue'),
-      meta: { requiresApproved: true },
+      meta: { requiresEditor: true },
     },
     {
       path: '/documents/:id/review',
       name: 'document-review',
       component: () => import('@/views/DocumentReviewView.vue'),
-      meta: { requiresApproved: true },
+      meta: { requiresEditor: true },
     },
 
     // ─── Admin only ───────────────────────────────────────────────────────
@@ -116,6 +127,16 @@ router.beforeEach(async (to) => {
     if (!auth.isApproved) {
       return auth.isPending ? { name: 'pending' } : { name: 'login' }
     }
+    if (auth.needsOnboarding && to.name !== 'onboarding') return { name: 'onboarding' }
+  }
+
+  // Editor-only routes
+  if (to.meta.requiresEditor) {
+    if (!auth.isAuthenticated) return { name: 'login', query: { redirect: to.fullPath } }
+    if (!auth.isApproved) {
+      return auth.isPending ? { name: 'pending' } : { name: 'login' }
+    }
+    if (!auth.isEditor) return { name: 'tree' }
     if (auth.needsOnboarding && to.name !== 'onboarding') return { name: 'onboarding' }
   }
 
