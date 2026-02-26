@@ -1,5 +1,4 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import type { RouteMeta } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 declare module 'vue-router' {
