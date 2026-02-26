@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, onMounted } from 'vue'
+import { reactive, onMounted, onUnmounted } from 'vue'
 import { supabase } from '@/services/supabase'
 import { usePeopleStore } from '@/stores/people'
 import type { RelationshipSuggestion, PersonSummary } from '@/types'
@@ -39,6 +39,8 @@ const states = reactive<SuggestionState[]>(props.suggestions.map(makeState))
 
 // ─── Auto-search on mount ──────────────────────────────────────────────────
 
+let isMounted = true
+
 onMounted(async () => {
   const searches = props.suggestions.map(async (s, i) => {
     const state = states[i]
@@ -46,7 +48,7 @@ onMounted(async () => {
     try {
       await peopleStore.fetchPeople({ query: s.mentionedName })
       const match = peopleStore.list[0]
-      if (match) {
+      if (match && isMounted) {
         state.matchedPerson = {
           id: match.id,
           firstName: match.firstName,
@@ -63,6 +65,10 @@ onMounted(async () => {
     }
   })
   await Promise.all(searches)
+})
+
+onUnmounted(() => {
+  isMounted = false
 })
 
 // ─── Relationship type display ──────────────────────────────────────────────
@@ -363,9 +369,8 @@ function birthYear(person: PersonSummary): string {
               <label class="form-label">Birth Date (optional)</label>
               <input
                 v-model="states[i]!.newBirthDate"
-                type="text"
+                type="date"
                 class="form-input"
-                placeholder="YYYY-MM-DD"
               />
             </div>
           </div>
