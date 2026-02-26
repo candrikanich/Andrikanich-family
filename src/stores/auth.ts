@@ -40,21 +40,16 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { first_name: firstName, last_name: lastName } },
+      })
       if (signUpError) throw signUpError
       if (!data.user) throw new Error('No user returned from signup')
 
-      const { error: profileError } = await supabase.from('profiles').insert({
-        id: data.user.id,
-        email,
-        first_name: firstName,
-        last_name: lastName,
-        role: 'viewer',
-        status: 'pending',
-        person_id: null,
-      })
-      if (profileError) throw profileError
-
+      // Profile is created automatically by the handle_new_user DB trigger.
+      // We set local state optimistically so the UI can show the pending card.
       profile.value = {
         id: data.user.id,
         email,
