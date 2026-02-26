@@ -147,7 +147,7 @@ describe('useDocumentsStore', () => {
       }),
     )
     expect(mockFunctionsInvoke).toHaveBeenCalledWith('extract-document', { body: { documentId: 'doc-1' } })
-    expect(result).toEqual(EXTRACTION_RESULT)
+    expect(result).toEqual({ documentId: 'doc-1', result: EXTRACTION_RESULT })
     expect(store.currentResult).toEqual(EXTRACTION_RESULT)
     expect(store.uploading).toBe(false)
     expect(store.extracting).toBe(false)

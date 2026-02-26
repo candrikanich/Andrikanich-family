@@ -125,14 +125,7 @@ async function handleUpload() {
 
   documentsStore.error = null
   try {
-    const result = await documentsStore.uploadDocument(selectedPerson.value.id, selectedFile.value)
-    // After upload, the new document is reflected in documentsStore.documents
-    // The store inserts it with a known personId — find it by personId + filename
-    const doc = documentsStore.documents.find(
-      d => d.personId === selectedPerson.value!.id && d.originalFilename === selectedFile.value!.name,
-    )
-    const documentId = doc?.id ?? result.person.firstName.value // fallback never reached in practice
-
+    const { documentId, result } = await documentsStore.uploadDocument(selectedPerson.value.id, selectedFile.value)
     router.push({
       name: 'document-review',
       params: { id: documentId },
@@ -181,7 +174,7 @@ async function handleUpload() {
 
             <!-- Dropdown results -->
             <ul
-              v-if="showDropdown"
+              v-if="showDropdown && !isProcessing"
               class="absolute z-20 mt-1 w-full bg-white border border-parchment rounded-lg shadow-lg max-h-52 overflow-y-auto"
             >
               <li

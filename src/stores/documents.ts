@@ -33,7 +33,7 @@ export const useDocumentsStore = defineStore('documents', () => {
   const error = ref<string | null>(null)
   const currentResult = ref<ExtractionResult | null>(null)
 
-  async function uploadDocument(personId: string, file: File): Promise<ExtractionResult> {
+  async function uploadDocument(personId: string, file: File): Promise<{ documentId: string; result: ExtractionResult }> {
     uploading.value = true
     error.value = null
     try {
@@ -69,9 +69,10 @@ export const useDocumentsStore = defineStore('documents', () => {
       if (fnError) throw fnError
 
       const result = fnData as ExtractionResult
+      const documentId = docRow.id
       extracting.value = false
       currentResult.value = result
-      return result
+      return { documentId, result }
     } catch (err) {
       uploading.value = false
       extracting.value = false
