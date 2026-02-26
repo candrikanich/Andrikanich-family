@@ -45,6 +45,10 @@ function selectRoot(id: string) {
   router.replace({ name: 'tree', query: { root: id } })
 }
 
+function closePicker() {
+  showPicker.value = false
+}
+
 // ── Layout ────────────────────────────────────────────────────────────────────
 const nodes = ref<ReturnType<typeof buildTreeLayout>['nodes']>([])
 const edges = ref<ReturnType<typeof buildTreeLayout>['edges']>([])
@@ -138,7 +142,7 @@ watch(rootId, async (id) => {
 
     <!-- Person picker overlay -->
     <Transition name="fade">
-      <div v-if="showPicker" class="picker-overlay">
+      <div v-if="showPicker" class="picker-overlay" @keydown.esc.window="closePicker">
         <div class="picker-modal card p-6">
           <h2 class="font-display text-xl text-walnut mb-4">Choose a starting person</h2>
           <input
@@ -162,6 +166,15 @@ watch(rootId, async (id) => {
             <p v-if="pickerResults.length === 0 && pickerQuery" class="text-walnut-muted text-sm px-3 py-2">
               No matches for "{{ pickerQuery }}"
             </p>
+          </div>
+          <div class="mt-3 text-center">
+            <button
+              v-if="auth.profile?.personId"
+              @click="closePicker"
+              class="text-sm text-walnut-muted hover:text-walnut transition-colors"
+            >
+              Cancel
+            </button>
           </div>
         </div>
       </div>
@@ -206,16 +219,16 @@ watch(rootId, async (id) => {
 .slide-over-leave-active {
   transition: opacity 0.2s ease;
 }
-.slide-over-enter-active .slide-over__panel,
-.slide-over-leave-active .slide-over__panel {
+.slide-over-enter-active :deep(.slide-over__panel),
+.slide-over-leave-active :deep(.slide-over__panel) {
   transition: transform 0.25s ease;
 }
 .slide-over-enter-from,
 .slide-over-leave-to {
   opacity: 0;
 }
-.slide-over-enter-from .slide-over__panel,
-.slide-over-leave-to .slide-over__panel {
+.slide-over-enter-from :deep(.slide-over__panel),
+.slide-over-leave-to :deep(.slide-over__panel) {
   transform: translateX(100%);
 }
 

@@ -2,7 +2,7 @@
 import { Handle, Position } from '@vue-flow/core'
 import type { TreePerson } from '@/types'
 
-const props = defineProps<{
+defineProps<{
   data: { person: TreePerson; isRoot: boolean }
 }>()
 
