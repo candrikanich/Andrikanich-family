@@ -31,3 +31,4 @@ dist-ssr
 # Test coverage
 coverage
 .nyc_output
+.worktrees/
