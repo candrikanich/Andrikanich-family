@@ -19,12 +19,15 @@ function mapMedia(row: MediaRow): Media {
 }
 
 export function useMedia(personId: string) {
+  const auth      = useAuthStore()
   const photos    = ref<Media[]>([])
   const urls      = ref<Record<string, string>>({})
   const uploading = ref(false)
+  const isLoading = ref(false)
   const error     = ref<string | null>(null)
 
   async function load(): Promise<void> {
+    isLoading.value = true
     error.value = null
     try {
       const { data, error: dbError } = await supabase
@@ -35,6 +38,7 @@ export function useMedia(personId: string) {
       if (dbError) throw dbError
 
       photos.value = (data ?? []).map(mapMedia)
+      urls.value = {}
 
       if (photos.value.length > 0) {
         const paths = photos.value.map(p => p.storagePath)
@@ -51,20 +55,24 @@ export function useMedia(personId: string) {
     } catch (err) {
       error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
       throw err
+    } finally {
+      isLoading.value = false
     }
   }
 
   async function upload(file: File, caption?: string, yearApprox?: number): Promise<void> {
     uploading.value = true
     error.value = null
+    let storagePath: string | null = null
+    let storageUploaded = false
     try {
-      const auth = useAuthStore()
-      const storagePath = `${personId}/${crypto.randomUUID()}-${file.name}`
+      storagePath = `${personId}/${crypto.randomUUID()}-${file.name}`
 
       const { error: storageError } = await supabase.storage
         .from('media')
         .upload(storagePath, file)
       if (storageError) throw storageError
+      storageUploaded = true
 
       const { data: inserted, error: insertError } = await supabase
         .from('media')
@@ -90,6 +98,9 @@ export function useMedia(personId: string) {
 
       await load()
     } catch (err) {
+      if (storageUploaded && storagePath) {
+        await supabase.storage.from('media').remove([storagePath]).catch(() => {})
+      }
       error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
       throw err
     } finally {
@@ -98,6 +109,7 @@ export function useMedia(personId: string) {
   }
 
   async function remove(photo: Media): Promise<void> {
+    isLoading.value = true
     error.value = null
     try {
       const { error: storageError } = await supabase.storage
@@ -115,6 +127,8 @@ export function useMedia(personId: string) {
     } catch (err) {
       error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
       throw err
+    } finally {
+      isLoading.value = false
     }
   }
 
@@ -132,5 +146,5 @@ export function useMedia(personId: string) {
     }
   }
 
-  return { photos, urls, uploading, error, load, upload, remove, setPrimary }
+  return { photos, urls, uploading, isLoading, error, load, upload, remove, setPrimary }
 }

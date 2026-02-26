@@ -56,6 +56,25 @@ describe('useMedia', () => {
     expect(media.photos.value).toHaveLength(1)
     expect(media.photos.value[0].id).toBe('photo-1')
     expect(media.urls.value['person-1/photo-1.jpg']).toBe('https://cdn.example.com/photo-1.jpg')
+    expect(media.isLoading.value).toBe(false)
+  })
+
+  it('load resets urls when photos list becomes empty', async () => {
+    // First load: one photo
+    mockChain.order.mockResolvedValueOnce({ data: [MEDIA_ROW], error: null })
+    mockStorageSignedUrls.mockResolvedValueOnce({
+      data: [{ path: 'person-1/photo-1.jpg', signedUrl: 'https://cdn.example.com/photo-1.jpg' }],
+      error: null,
+    })
+    const media = useMedia('person-1')
+    await media.load()
+    expect(media.urls.value['person-1/photo-1.jpg']).toBe('https://cdn.example.com/photo-1.jpg')
+
+    // Second load: no photos — urls should be cleared
+    mockChain.order.mockResolvedValueOnce({ data: [], error: null })
+    await media.load()
+    expect(media.photos.value).toHaveLength(0)
+    expect(media.urls.value).toEqual({})
   })
 
   it('load sets error when db fetch fails', async () => {
@@ -64,6 +83,7 @@ describe('useMedia', () => {
     const media = useMedia('person-1')
     await expect(media.load()).rejects.toThrow('db error')
     expect(media.error.value).toBe('db error')
+    expect(media.isLoading.value).toBe(false)
   })
 
   it('upload stores file, inserts row, and reloads', async () => {
@@ -85,11 +105,24 @@ describe('useMedia', () => {
     expect(media.photos.value).toHaveLength(1)
   })
 
+  it('upload rolls back storage file on DB insert failure', async () => {
+    mockStorageUpload.mockResolvedValueOnce({ error: null })
+    mockChain.single.mockResolvedValueOnce({ data: null, error: { message: 'insert failed' } })
+    mockStorageRemove.mockResolvedValueOnce({ error: null })
+
+    const media = useMedia('person-1')
+    const file = new File(['data'], 'photo-1.jpg', { type: 'image/jpeg' })
+    await expect(media.upload(file)).rejects.toThrow('insert failed')
+
+    expect(mockStorageRemove).toHaveBeenCalledWith([expect.stringContaining('person-1/')])
+    expect(media.uploading.value).toBe(false)
+  })
+
   it('remove deletes from storage and db then reloads', async () => {
     mockStorageRemove.mockResolvedValueOnce({ error: null })
     mockChain.eq.mockResolvedValueOnce({ error: null })
+    // reload inside remove
     mockChain.order.mockResolvedValueOnce({ data: [], error: null })
-    mockStorageSignedUrls.mockResolvedValueOnce({ data: [], error: null })
 
     const media = useMedia('person-1')
     const photo = {
@@ -100,6 +133,7 @@ describe('useMedia', () => {
 
     expect(mockStorageRemove).toHaveBeenCalledWith(['person-1/photo-1.jpg'])
     expect(media.photos.value).toHaveLength(0)
+    expect(media.isLoading.value).toBe(false)
   })
 
   it('setPrimary updates people.primary_photo_id', async () => {
@@ -109,5 +143,6 @@ describe('useMedia', () => {
     await media.setPrimary('photo-1')
 
     expect(mockFrom).toHaveBeenCalledWith('people')
+    expect(mockChain.update).toHaveBeenCalledWith({ primary_photo_id: 'photo-1' })
   })
 })
