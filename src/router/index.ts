@@ -104,7 +104,7 @@ router.beforeEach(async (to) => {
     if (!auth.isApproved) {
       return auth.isPending ? { name: 'pending' } : { name: 'login' }
     }
-    if (auth.needsOnboarding) return { name: 'onboarding' }
+    if (auth.needsOnboarding && to.name !== 'onboarding') return { name: 'onboarding' }
   }
 
   // Admin-only routes

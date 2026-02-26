@@ -39,7 +39,11 @@ export interface Database {
           created_at: string
           updated_at: string
         }
-        Insert: Omit<Database['public']['Tables']['people']['Row'], 'id' | 'created_at' | 'updated_at'>
+        Insert: Omit<Database['public']['Tables']['people']['Row'], 'id' | 'created_at' | 'updated_at' | 'primary_photo_id' | 'user_id' | 'created_by'> & {
+          primary_photo_id?: string | null
+          user_id?: string | null
+          created_by?: string | null
+        }
         Update: Partial<Database['public']['Tables']['people']['Insert']>
         Relationships: []
       }
