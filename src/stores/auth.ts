@@ -1,45 +1,63 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { supabase } from '@/services/supabase'
-import type { User } from '@/types'
+import type { Profile } from '@/types'
 
 export const useAuthStore = defineStore('auth', () => {
-  const user = ref<User | null>(null)
+  const profile = ref<Profile | null>(null)
   const isAuthenticated = ref(false)
   const isLoading = ref(false)
   const error = ref<string | null>(null)
 
-  async function signup(email: string, password: string, firstName: string, lastName: string) {
+  // ─── Computed ───────────────────────────────────────────────────────────────
+  const isPending       = computed(() => profile.value?.status === 'pending')
+  const isApproved      = computed(() => profile.value?.status === 'approved')
+  const isAdmin         = computed(() => isApproved.value && profile.value?.role === 'admin')
+  const isEditor        = computed(() => isApproved.value && (profile.value?.role === 'editor' || profile.value?.role === 'admin'))
+  const needsOnboarding = computed(() => isApproved.value && profile.value?.personId === null)
+
+  // ─── Helpers ────────────────────────────────────────────────────────────────
+  function mapProfile(row: {
+    id: string; email: string; first_name: string; last_name: string
+    role: string; status: string; person_id: string | null
+    created_at: string; updated_at: string
+  }): Profile {
+    return {
+      id: row.id,
+      email: row.email,
+      firstName: row.first_name,
+      lastName: row.last_name,
+      role: row.role as Profile['role'],
+      status: row.status as Profile['status'],
+      personId: row.person_id,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+    }
+  }
+
+  // ─── Actions ────────────────────────────────────────────────────────────────
+  async function register(email: string, password: string, firstName: string, lastName: string) {
     isLoading.value = true
     error.value = null
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            first_name: firstName,
-            last_name: lastName,
-          }
-        }
-      })
-
+      const { data, error: signUpError } = await supabase.auth.signUp({ email, password })
       if (signUpError) throw signUpError
+      if (!data.user) throw new Error('No user returned from signup')
 
-      // Create user profile in users table
-      if (data.user) {
-        await supabase.from('users').insert({
-          id: data.user.id,
-          email: data.user.email,
-          first_name: firstName,
-          last_name: lastName,
-          role: 'viewer'
-        })
-      }
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: data.user.id,
+        email,
+        first_name: firstName,
+        last_name: lastName,
+        role: 'viewer',
+        status: 'pending',
+        person_id: null,
+      })
+      if (profileError) throw profileError
 
-      return data
+      return data.user
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Signup failed'
+      error.value = err instanceof Error ? err.message : 'Registration failed'
       throw err
     } finally {
       isLoading.value = false
@@ -50,35 +68,21 @@ export const useAuthStore = defineStore('auth', () => {
     isLoading.value = true
     error.value = null
     try {
-      const { data, error: loginError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      })
-
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({ email, password })
       if (loginError) throw loginError
+      if (!data.user) throw new Error('Login failed')
 
-      if (data.user) {
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', data.user.id)
-          .single()
+      const { data: profileRow, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', data.user.id)
+        .single()
 
-        if (userProfile) {
-          user.value = {
-            id: userProfile.id,
-            email: userProfile.email,
-            firstName: userProfile.first_name,
-            lastName: userProfile.last_name,
-            role: userProfile.role,
-            createdAt: userProfile.created_at
-          }
-        }
+      if (profileError) throw profileError
 
-        isAuthenticated.value = true
-      }
-
-      return data
+      profile.value = mapProfile(profileRow)
+      isAuthenticated.value = true
+      return profile.value
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Login failed'
       throw err
@@ -90,48 +94,57 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     try {
       await supabase.auth.signOut()
-      user.value = null
+    } finally {
+      profile.value = null
       isAuthenticated.value = false
-    } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Logout failed'
+      error.value = null
     }
   }
 
   async function checkAuth() {
     try {
       const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        const { data: userProfile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', session.user.id)
-          .single()
+      if (!session?.user) return
 
-        if (userProfile) {
-          user.value = {
-            id: userProfile.id,
-            email: userProfile.email,
-            firstName: userProfile.first_name,
-            lastName: userProfile.last_name,
-            role: userProfile.role,
-            createdAt: userProfile.created_at
-          }
-          isAuthenticated.value = true
-        }
+      const { data: profileRow } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single()
+
+      if (profileRow) {
+        profile.value = mapProfile(profileRow)
+        isAuthenticated.value = true
       }
-    } catch (err) {
-      console.error('Auth check failed:', err)
+    } catch {
+      // Silent fail — router guard will redirect to login
     }
   }
 
+  async function refreshProfile() {
+    if (!profile.value) return
+    const { data } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', profile.value.id)
+      .single()
+    if (data) profile.value = mapProfile(data)
+  }
+
   return {
-    user,
+    profile,
     isAuthenticated,
     isLoading,
     error,
-    signup,
+    isPending,
+    isApproved,
+    isAdmin,
+    isEditor,
+    needsOnboarding,
+    register,
     login,
     logout,
-    checkAuth
+    checkAuth,
+    refreshProfile,
   }
 })
