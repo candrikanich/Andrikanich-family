@@ -45,21 +45,31 @@ export const useAdminStore = defineStore('admin', () => {
   }
 
   async function approve(profileId: string) {
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ status: 'approved' })
-      .eq('id', profileId)
-    if (updateError) throw updateError
-    pendingProfiles.value = pendingProfiles.value.filter(p => p.id !== profileId)
+    try {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ status: 'approved' })
+        .eq('id', profileId)
+      if (updateError) throw updateError
+      pendingProfiles.value = pendingProfiles.value.filter(p => p.id !== profileId)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to approve user'
+      throw err
+    }
   }
 
   async function deny(profileId: string) {
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ status: 'denied' })
-      .eq('id', profileId)
-    if (updateError) throw updateError
-    pendingProfiles.value = pendingProfiles.value.filter(p => p.id !== profileId)
+    try {
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ status: 'denied' })
+        .eq('id', profileId)
+      if (updateError) throw updateError
+      pendingProfiles.value = pendingProfiles.value.filter(p => p.id !== profileId)
+    } catch (err) {
+      error.value = err instanceof Error ? err.message : 'Failed to deny user'
+      throw err
+    }
   }
 
   return { pendingProfiles, isLoading, error, fetchPending, approve, deny }

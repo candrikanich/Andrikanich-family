@@ -22,6 +22,12 @@ interface WebhookPayload {
 
 serve(async (req) => {
   try {
+    const webhookSecret = Deno.env.get('WEBHOOK_SECRET') ?? ''
+    const incomingSecret = req.headers.get('x-webhook-secret') ?? ''
+    if (!webhookSecret || incomingSecret !== webhookSecret) {
+      return new Response('unauthorized', { status: 401 })
+    }
+
     const payload: WebhookPayload = await req.json()
 
     // Only fire on INSERT into profiles with status=pending

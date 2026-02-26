@@ -55,6 +55,19 @@ export const useAuthStore = defineStore('auth', () => {
       })
       if (profileError) throw profileError
 
+      profile.value = {
+        id: data.user.id,
+        email,
+        firstName,
+        lastName,
+        role: 'viewer',
+        status: 'pending',
+        personId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      isAuthenticated.value = true
+
       return data.user
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Registration failed'

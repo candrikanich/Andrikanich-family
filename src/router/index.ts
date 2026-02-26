@@ -101,7 +101,9 @@ router.beforeEach(async (to) => {
   // Approved-only routes
   if (to.meta.requiresApproved) {
     if (!auth.isAuthenticated) return { name: 'login', query: { redirect: to.fullPath } }
-    if (auth.isPending) return { name: 'pending' }
+    if (!auth.isApproved) {
+      return auth.isPending ? { name: 'pending' } : { name: 'login' }
+    }
     if (auth.needsOnboarding) return { name: 'onboarding' }
   }
 

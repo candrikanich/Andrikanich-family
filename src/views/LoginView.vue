@@ -19,7 +19,8 @@ async function handleLogin() {
       router.push({ name: 'onboarding' })
     } else {
       const redirect = route.query.redirect as string | undefined
-      router.push(redirect ?? { name: 'tree' })
+      const safePath = redirect?.startsWith('/') ? redirect : undefined
+      router.push(safePath ?? { name: 'tree' })
     }
   } catch {
     // auth.error is set in the store
