@@ -136,6 +136,7 @@ export const useDocumentsStore = defineStore('documents', () => {
             from_date: r.fromDate ?? null,
             to_date: r.toDate ?? null,
             is_current: r.isCurrent,
+            sort_order: 0,
           })),
         )
         if (resError) throw resError
@@ -150,6 +151,8 @@ export const useDocumentsStore = defineStore('documents', () => {
             start_year: e.startYear ?? null,
             end_year: e.endYear ?? null,
             graduated: e.graduated ?? null,
+            location: null,
+            notes: null,
           })),
         )
         if (eduError) throw eduError
