@@ -34,8 +34,9 @@ async function handleFileSelected(event: Event) {
     showUpload.value = false
     caption.value    = ''
     yearApprox.value = ''
-    if (media.photos.value.length === 1) {
-      emit('primaryChanged', media.photos.value[0].id)
+    const first = media.photos.value[0]
+    if (media.photos.value.length === 1 && first) {
+      emit('primaryChanged', first.id)
     }
   } catch (err) {
     uploadError.value = err instanceof Error ? err.message : 'Upload failed'
@@ -50,8 +51,9 @@ async function handleSetPrimary(photo: Media) {
 async function handleRemove(photo: Media) {
   if (!confirm('Delete this photo?')) return
   await media.remove(photo)
-  if (props.primaryPhotoId === photo.id && media.photos.value.length > 0) {
-    emit('primaryChanged', media.photos.value[0].id)
+  const next = media.photos.value[0]
+  if (props.primaryPhotoId === photo.id && next) {
+    emit('primaryChanged', next.id)
   }
 }
 </script>

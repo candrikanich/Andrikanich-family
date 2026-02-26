@@ -48,7 +48,7 @@ export function useMedia(personId: string) {
         if (signError) throw signError
         const map: Record<string, string> = {}
         for (const entry of signed ?? []) {
-          if (entry.signedUrl) map[entry.path] = entry.signedUrl
+          if (entry.signedUrl && entry.path) map[entry.path] = entry.signedUrl
         }
         urls.value = map
       }
