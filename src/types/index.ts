@@ -177,3 +177,28 @@ export interface NameMatchCandidate {
   person: PersonSummary
   score: number
 }
+
+// ─── People Input ─────────────────────────────────────────────────────────────
+
+export interface PersonInput {
+  firstName: string
+  lastName: string
+  birthSurname?: string | null
+  nickname?: string | null
+  nameVariants?: string[]
+  suffix?: string | null
+  birthDate?: string | null
+  birthPlace?: string | null
+  deathDate?: string | null
+  deathPlace?: string | null
+  burialPlace?: string | null
+  notes?: string | null
+  biography?: string | null
+}
+
+export interface PeopleSearchParams {
+  query?: string
+  birthYearMin?: number
+  birthYearMax?: number
+  location?: string
+}
