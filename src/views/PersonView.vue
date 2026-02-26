@@ -36,8 +36,12 @@ function formatHistoryValue(val: unknown): string {
 
 async function handleRestore(entry: EditHistoryEntry) {
   if (!confirm(`Restore "${entry.fieldName}" to its previous value?`)) return
-  await editHistory.restore(entry)
-  await detail.load()
+  try {
+    await editHistory.restore(entry)
+    await detail.load()
+  } catch {
+    // Errors are surfaced via editHistory.error.value and detail.error.value in the template
+  }
 }
 
 watch(() => detail.person.value, (p) => {
@@ -232,9 +236,15 @@ function exportPdf() { window.print() }
                 <span class="font-medium text-walnut capitalize">{{ entry.fieldName.replace(/_/g, ' ') }}</span>
                 <div class="text-walnut-muted mt-0.5 space-y-0.5">
                   <div v-if="entry.oldValue !== null">
-                    <span class="text-xs bg-red-50 text-red-700 px-1 rounded line-through">{{ formatHistoryValue(entry.oldValue) }}</span>
+                    <span class="text-xs bg-red-50 text-red-700 px-1 rounded line-through truncate max-w-xs inline-block"
+                          :title="formatHistoryValue(entry.oldValue)">
+                      {{ formatHistoryValue(entry.oldValue) }}
+                    </span>
                     →
-                    <span class="text-xs bg-green-50 text-green-700 px-1 rounded">{{ formatHistoryValue(entry.newValue) }}</span>
+                    <span class="text-xs bg-green-50 text-green-700 px-1 rounded truncate max-w-xs inline-block"
+                          :title="formatHistoryValue(entry.newValue)">
+                      {{ formatHistoryValue(entry.newValue) }}
+                    </span>
                   </div>
                   <div v-else class="text-xs text-walnut-muted italic">Record created</div>
                 </div>
