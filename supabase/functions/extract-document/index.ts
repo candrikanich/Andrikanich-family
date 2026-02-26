@@ -61,16 +61,23 @@ interface DocumentRow {
   mime_type: string
 }
 
+// ─── Env helpers ───────────────────────────────────────────────────────────────
+
+function requireEnv(key: string): string {
+  const value = Deno.env.get(key)
+  if (!value) throw new Error(`Missing required environment variable: ${key}`)
+  return value
+}
+
 // ─── Constants ─────────────────────────────────────────────────────────────────
 
-const SUPABASE_URL               = Deno.env.get('SUPABASE_URL') ?? ''
-const SUPABASE_ANON_KEY          = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
-const SUPABASE_SERVICE_ROLE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const ANTHROPIC_API_KEY          = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
+const SUPABASE_URL               = requireEnv('SUPABASE_URL')
+const SUPABASE_ANON_KEY          = requireEnv('SUPABASE_ANON_KEY')
+const SUPABASE_SERVICE_ROLE_KEY  = requireEnv('SUPABASE_SERVICE_ROLE_KEY')
+const ANTHROPIC_API_KEY          = requireEnv('ANTHROPIC_API_KEY')
 
 const SUPPORTED_MIMES = new Set([
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'application/msword',
   'application/pdf',
 ])
 
@@ -258,6 +265,7 @@ function extractPdfRawFallback(bytes: Uint8Array): string {
 
 async function callHaiku(documentText: string): Promise<unknown> {
   const MAX_RETRIES = 2
+  const RETRIABLE_STATUSES = new Set([429, 500, 502, 503, 529])
 
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
@@ -278,14 +286,18 @@ async function callHaiku(documentText: string): Promise<unknown> {
     if (response.ok) {
       const data = await response.json()
       const rawContent: string = data.content?.[0]?.text ?? ''
-      return JSON.parse(rawContent)
+      try {
+        return JSON.parse(rawContent)
+      } catch {
+        throw new Error(`Claude returned non-JSON response: ${rawContent.slice(0, 200)}`)
+      }
     }
 
     const errBody = await response.text()
     console.error(`Haiku attempt ${attempt + 1} failed (${response.status}):`, errBody)
 
-    if (attempt === MAX_RETRIES) {
-      throw new Error(`Claude Haiku failed after ${MAX_RETRIES + 1} attempts: ${errBody}`)
+    if (!RETRIABLE_STATUSES.has(response.status) || attempt === MAX_RETRIES) {
+      throw new Error(`Claude API error (${response.status}): ${errBody}`)
     }
   }
 }
@@ -331,6 +343,11 @@ serve(async (req) => {
       return errorResponse('Missing required field: documentId', 400)
     }
 
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    if (!UUID_REGEX.test(documentId)) {
+      return errorResponse('Invalid documentId format', 400)
+    }
+
     // ── 3. Fetch the documents row using service role (bypasses RLS) ──────────
     const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
 
@@ -363,8 +380,7 @@ serve(async (req) => {
 
     // ── 6. Extract plain text ─────────────────────────────────────────────────
     const isDocx =
-      docRow.mime_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' ||
-      docRow.mime_type === 'application/msword'
+      docRow.mime_type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
     const documentText = isDocx
       ? await extractDocxText(fileBytes)
