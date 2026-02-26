@@ -5,6 +5,12 @@ import type { TreePerson, TreeParentChildEdge, TreeMarriageEdge, TreeSubgraph } 
 import type { Database } from '@/types/database'
 
 type PersonRow = Database['public']['Tables']['people']['Row']
+type ParentChildRow = Database['public']['Tables']['parent_child']['Row']
+type MarriageRow = Database['public']['Tables']['marriages']['Row']
+
+type ParentChildWithParent = ParentChildRow & { parent: PersonRow | null }
+type ParentChildWithChild  = ParentChildRow & { child: PersonRow | null }
+type MarriageWithPeople    = MarriageRow & { person_a: PersonRow | null; person_b: PersonRow | null }
 
 function mapTreePerson(row: PersonRow): TreePerson {
   return {
@@ -38,9 +44,8 @@ export const useTreeStore = defineStore('tree', () => {
     error.value = null
     try {
       // ── Round 1: root + direct edges ───────────────────────────────────────
-      const rootPersonRes = await supabase.from('people').select('*').eq('id', rootId).single()
-
-      const [parentEdgesRes, childEdgesRes, rootMarriagesRes] = await Promise.all([
+      const [rootRes, parentEdgesRes, childEdgesRes, rootMarriagesRes] = await Promise.all([
+        supabase.from('people').select('*').eq('id', rootId).single(),
         supabase.from('parent_child')
           .select('*, parent:parent_id(*)')
           .eq('child_id', rootId),
@@ -52,48 +57,46 @@ export const useTreeStore = defineStore('tree', () => {
           .or(`person_a_id.eq.${rootId},person_b_id.eq.${rootId}`),
       ])
 
-      if (rootPersonRes.error)    throw rootPersonRes.error
+      if (rootRes.error)          throw rootRes.error
       if (parentEdgesRes.error)   throw parentEdgesRes.error
       if (childEdgesRes.error)    throw childEdgesRes.error
       if (rootMarriagesRes.error) throw rootMarriagesRes.error
 
-      const rootPerson = mapTreePerson(rootPersonRes.data)
+      const rootPerson = mapTreePerson(rootRes.data)
 
-      const parentEdges: TreeParentChildEdge[] = (parentEdgesRes.data ?? []).map((r: Record<string, unknown>) => ({
-        id:        r['id'] as string,
-        parentId:  r['parent_id'] as string,
-        childId:   r['child_id'] as string,
-        confirmed: r['confirmed'] as boolean,
+      const parentEdges: TreeParentChildEdge[] = (parentEdgesRes.data ?? []).map((r: ParentChildWithParent) => ({
+        id:        r.id,
+        parentId:  r.parent_id,
+        childId:   r.child_id,
+        confirmed: r.confirmed,
       }))
 
-      const childEdges: TreeParentChildEdge[] = (childEdgesRes.data ?? []).map((r: Record<string, unknown>) => ({
-        id:        r['id'] as string,
-        parentId:  r['parent_id'] as string,
-        childId:   r['child_id'] as string,
-        confirmed: r['confirmed'] as boolean,
+      const childEdges: TreeParentChildEdge[] = (childEdgesRes.data ?? []).map((r: ParentChildWithChild) => ({
+        id:        r.id,
+        parentId:  r.parent_id,
+        childId:   r.child_id,
+        confirmed: r.confirmed,
       }))
 
       const parentPeople: TreePerson[] = (parentEdgesRes.data ?? [])
-        .filter((r: Record<string, unknown>) => r['parent'] != null)
-        .map((r: Record<string, unknown>) => mapTreePerson(r['parent'] as PersonRow))
+        .filter((r: ParentChildWithParent) => r.parent != null)
+        .map((r: ParentChildWithParent) => mapTreePerson(r.parent!))
 
       const childPeople: TreePerson[] = (childEdgesRes.data ?? [])
-        .filter((r: Record<string, unknown>) => r['child'] != null)
-        .map((r: Record<string, unknown>) => mapTreePerson(r['child'] as PersonRow))
+        .filter((r: ParentChildWithChild) => r.child != null)
+        .map((r: ParentChildWithChild) => mapTreePerson(r.child!))
 
-      const rootMarriageEdges: TreeMarriageEdge[] = (rootMarriagesRes.data ?? []).map((r: Record<string, unknown>) => ({
-        id:           r['id'] as string,
-        personAId:    r['person_a_id'] as string,
-        personBId:    r['person_b_id'] as string,
-        marriageDate: r['marriage_date'] as string | null,
+      const rootMarriageEdges: TreeMarriageEdge[] = (rootMarriagesRes.data ?? []).map((r: MarriageWithPeople) => ({
+        id:           r.id,
+        personAId:    r.person_a_id,
+        personBId:    r.person_b_id,
+        marriageDate: r.marriage_date,
       }))
 
       const rootSpousePeople: TreePerson[] = (rootMarriagesRes.data ?? [])
-        .filter((r: Record<string, unknown>) => r['person_a'] != null && r['person_b'] != null)
-        .map((r: Record<string, unknown>) => {
-          const spouseRow = (r['person_a_id'] as string) === rootId
-            ? r['person_b'] as PersonRow
-            : r['person_a'] as PersonRow
+        .filter((r: MarriageWithPeople) => r.person_a != null && r.person_b != null)
+        .map((r: MarriageWithPeople) => {
+          const spouseRow = r.person_a_id === rootId ? r.person_b! : r.person_a!
           return mapTreePerson(spouseRow)
         })
 
@@ -123,31 +126,31 @@ export const useTreeStore = defineStore('tree', () => {
         if (gpEdgesRes.error)         throw gpEdgesRes.error
         if (parentMarriagesRes.error) throw parentMarriagesRes.error
 
-        grandparentEdges = (gpEdgesRes.data ?? []).map((r: Record<string, unknown>) => ({
-          id:        r['id'] as string,
-          parentId:  r['parent_id'] as string,
-          childId:   r['child_id'] as string,
-          confirmed: r['confirmed'] as boolean,
+        grandparentEdges = (gpEdgesRes.data ?? []).map((r: ParentChildWithParent) => ({
+          id:        r.id,
+          parentId:  r.parent_id,
+          childId:   r.child_id,
+          confirmed: r.confirmed,
         }))
 
         grandparentPeople = (gpEdgesRes.data ?? [])
-          .filter((r: Record<string, unknown>) => r['parent'] != null)
-          .map((r: Record<string, unknown>) => mapTreePerson(r['parent'] as PersonRow))
+          .filter((r: ParentChildWithParent) => r.parent != null)
+          .map((r: ParentChildWithParent) => mapTreePerson(r.parent!))
 
-        parentMarriageEdges = (parentMarriagesRes.data ?? []).map((r: Record<string, unknown>) => ({
-          id:           r['id'] as string,
-          personAId:    r['person_a_id'] as string,
-          personBId:    r['person_b_id'] as string,
-          marriageDate: r['marriage_date'] as string | null,
+        parentMarriageEdges = (parentMarriagesRes.data ?? []).map((r: MarriageWithPeople) => ({
+          id:           r.id,
+          personAId:    r.person_a_id,
+          personBId:    r.person_b_id,
+          marriageDate: r.marriage_date,
         }))
 
         parentSpousePeople = (parentMarriagesRes.data ?? [])
-          .filter((r: Record<string, unknown>) => r['person_a'] != null && r['person_b'] != null)
-          .flatMap((r: Record<string, unknown>) => {
-            const rows: TreePerson[] = []
-            if (r['person_a']) rows.push(mapTreePerson(r['person_a'] as PersonRow))
-            if (r['person_b']) rows.push(mapTreePerson(r['person_b'] as PersonRow))
-            return rows
+          .filter((r: MarriageWithPeople) => r.person_a != null && r.person_b != null)
+          .flatMap((r: MarriageWithPeople) => {
+            const spouses: TreePerson[] = []
+            if (r.person_a && !parentIds.includes(r.person_a_id)) spouses.push(mapTreePerson(r.person_a))
+            if (r.person_b && !parentIds.includes(r.person_b_id)) spouses.push(mapTreePerson(r.person_b))
+            return spouses
           })
       }
 
