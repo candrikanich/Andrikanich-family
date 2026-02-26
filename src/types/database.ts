@@ -15,6 +15,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['profiles']['Row'], 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['profiles']['Insert']>
+        Relationships: []
       }
       people: {
         Row: {
@@ -40,6 +41,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['people']['Row'], 'id' | 'created_at' | 'updated_at'>
         Update: Partial<Database['public']['Tables']['people']['Insert']>
+        Relationships: []
       }
       marriages: {
         Row: {
@@ -54,6 +56,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['marriages']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['marriages']['Insert']>
+        Relationships: []
       }
       parent_child: {
         Row: {
@@ -66,6 +69,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['parent_child']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['parent_child']['Insert']>
+        Relationships: []
       }
       residences: {
         Row: {
@@ -79,6 +83,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['residences']['Row'], 'id'>
         Update: Partial<Database['public']['Tables']['residences']['Insert']>
+        Relationships: []
       }
       education: {
         Row: {
@@ -94,6 +99,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['education']['Row'], 'id'>
         Update: Partial<Database['public']['Tables']['education']['Insert']>
+        Relationships: []
       }
       occupations: {
         Row: {
@@ -107,6 +113,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['occupations']['Row'], 'id'>
         Update: Partial<Database['public']['Tables']['occupations']['Insert']>
+        Relationships: []
       }
       military_service: {
         Row: {
@@ -120,6 +127,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['military_service']['Row'], 'id'>
         Update: Partial<Database['public']['Tables']['military_service']['Insert']>
+        Relationships: []
       }
       documents: {
         Row: {
@@ -134,6 +142,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['documents']['Row'], 'id' | 'uploaded_at'>
         Update: Partial<Database['public']['Tables']['documents']['Insert']>
+        Relationships: []
       }
       media: {
         Row: {
@@ -147,6 +156,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['media']['Row'], 'id' | 'uploaded_at'>
         Update: Partial<Database['public']['Tables']['media']['Insert']>
+        Relationships: []
       }
       edit_history: {
         Row: {
@@ -161,6 +171,7 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['edit_history']['Row'], 'id' | 'changed_at'>
         Update: never
+        Relationships: []
       }
       sources: {
         Row: {
@@ -174,7 +185,14 @@ export interface Database {
         }
         Insert: Omit<Database['public']['Tables']['sources']['Row'], 'id' | 'created_at'>
         Update: Partial<Database['public']['Tables']['sources']['Insert']>
+        Relationships: []
       }
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      [_ in never]: never
     }
   }
 }
