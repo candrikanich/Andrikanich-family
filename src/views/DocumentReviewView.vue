@@ -222,11 +222,24 @@ async function handleCommit() {
   }
 }
 
+// ─── Cancel action ────────────────────────────────────────────────────────────
+
+async function handleCancel() {
+  await documentsStore.dismissDocument(documentId).catch(() => {})
+  committed.value = true
+  router.push('/upload')
+}
+
 // ─── Navigation guard ─────────────────────────────────────────────────────────
 
-onBeforeRouteLeave(() => {
+onBeforeRouteLeave(async () => {
   if (committed.value) return true
-  return window.confirm('You have uncommitted changes. Leave without committing?')
+  const leave = window.confirm('You have uncommitted changes. Leave without committing?')
+  if (leave) {
+    await documentsStore.dismissDocument(documentId).catch(() => {})
+    return true
+  }
+  return false
 })
 </script>
 
@@ -502,7 +515,11 @@ onBeforeRouteLeave(() => {
               </div>
             </section>
 
-            <!-- Marriages (read-only) -->
+            <!-- Marriages (read-only)
+                 Known limitation: marriage dates/places are shown here for reference only.
+                 The actual DB marriage record is created via RelationshipSuggestions when
+                 the editor confirms the spouse relationship ("Link" action). After linking,
+                 the structured dates and place must be added manually to the marriage record. -->
             <section class="card p-6">
               <h2 class="font-display text-xl text-walnut mb-2">Marriages</h2>
               <p class="text-xs text-walnut-muted mb-4 italic">
@@ -593,12 +610,13 @@ onBeforeRouteLeave(() => {
                 <span v-else>Commit Extraction</span>
               </button>
 
-              <RouterLink
-                to="/upload"
-                class="block text-center text-sm text-walnut-muted hover:text-walnut mt-4 underline"
+              <button
+                type="button"
+                class="block w-full text-center text-sm text-walnut-muted hover:text-walnut mt-4 underline"
+                @click="handleCancel"
               >
                 Cancel &amp; return to upload
-              </RouterLink>
+              </button>
             </div>
 
             <!-- Relationship Suggestions -->

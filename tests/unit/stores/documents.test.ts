@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 
 // ── Hoisted mock setup ────────────────────────────────────────────────────────
-const { mockStorageUpload, mockFunctionsInvoke, mockChain, mockFrom } = vi.hoisted(() => {
+const { mockStorageUpload, mockStorageRemove, mockStorageFrom, mockFunctionsInvoke, mockChain, mockFrom } = vi.hoisted(() => {
   const mockChain = {
     select: vi.fn().mockReturnThis(),
     insert: vi.fn().mockReturnThis(),
@@ -13,15 +13,17 @@ const { mockStorageUpload, mockFunctionsInvoke, mockChain, mockFrom } = vi.hoist
   }
   const mockFrom = vi.fn(() => mockChain)
   const mockStorageUpload = vi.fn()
+  const mockStorageRemove = vi.fn()
+  const mockStorageFrom = vi.fn()
   const mockFunctionsInvoke = vi.fn()
-  return { mockStorageUpload, mockFunctionsInvoke, mockChain, mockFrom }
+  return { mockStorageUpload, mockStorageRemove, mockStorageFrom, mockFunctionsInvoke, mockChain, mockFrom }
 })
 
 vi.mock('@/services/supabase', () => ({
   supabase: {
     from: mockFrom,
     storage: {
-      from: vi.fn(() => ({ upload: mockStorageUpload })),
+      from: mockStorageFrom,
     },
     functions: {
       invoke: mockFunctionsInvoke,
@@ -95,6 +97,8 @@ describe('useDocumentsStore', () => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     resetChain()
+    // Restore storage.from to return the upload/remove mock object after clearAllMocks
+    mockStorageFrom.mockReturnValue({ upload: mockStorageUpload, remove: mockStorageRemove })
   })
 
   // ── Initial state ────────────────────────────────────────────────────────
@@ -166,12 +170,33 @@ describe('useDocumentsStore', () => {
   it('uploadDocument sets error and clears flags when DB insert fails', async () => {
     mockStorageUpload.mockResolvedValueOnce({ error: null })
     mockChain.single.mockResolvedValueOnce({ data: null, error: { message: 'Insert failed' } })
+    mockStorageRemove.mockResolvedValueOnce({ error: null })
 
     const store = useDocumentsStore()
     await expect(store.uploadDocument('person-1', makeFile())).rejects.toMatchObject({ message: 'Insert failed' })
     expect(store.error).toBe('Insert failed')
     expect(store.uploading).toBe(false)
     expect(store.extracting).toBe(false)
+  })
+
+  it('uploadDocument removes orphaned storage file when DB insert fails', async () => {
+    mockStorageUpload.mockResolvedValueOnce({ error: null })
+    mockChain.single.mockResolvedValueOnce({ data: null, error: { message: 'Insert failed' } })
+    mockStorageRemove.mockResolvedValueOnce({ error: null })
+
+    const store = useDocumentsStore()
+    await expect(store.uploadDocument('person-1', makeFile())).rejects.toBeDefined()
+    expect(mockStorageRemove).toHaveBeenCalledOnce()
+    // storagePath is a string of the form "person-1/<uuid>-test.pdf"
+    expect(mockStorageRemove).toHaveBeenCalledWith([expect.stringMatching(/^person-1\/.+-test\.pdf$/)])
+  })
+
+  it('uploadDocument does NOT remove storage file when storage upload itself fails', async () => {
+    mockStorageUpload.mockResolvedValueOnce({ error: { message: 'Storage error' } })
+
+    const store = useDocumentsStore()
+    await expect(store.uploadDocument('person-1', makeFile())).rejects.toBeDefined()
+    expect(mockStorageRemove).not.toHaveBeenCalled()
   })
 
   it('uploadDocument sets error and clears flags when Edge Function fails', async () => {

@@ -127,7 +127,6 @@ const canSubmit = computed(
 async function handleUpload() {
   if (!canSubmit.value || !selectedPerson.value || !selectedFile.value) return
 
-  documentsStore.error = null
   try {
     const { documentId, result } = await documentsStore.uploadDocument(selectedPerson.value.id, selectedFile.value)
     router.push({

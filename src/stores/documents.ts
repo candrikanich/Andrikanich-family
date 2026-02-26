@@ -36,16 +36,22 @@ export const useDocumentsStore = defineStore('documents', () => {
   async function uploadDocument(personId: string, file: File): Promise<{ documentId: string; result: ExtractionResult }> {
     uploading.value = true
     error.value = null
+
+    let storagePath: string | null = null
+    let storageUploaded = false
+    let docRow: { id: string } | null = null
+
     try {
       const authStore = useAuthStore()
-      const storagePath = `${personId}/${crypto.randomUUID()}-${file.name}`
+      storagePath = `${personId}/${crypto.randomUUID()}-${file.name}`
 
       const { error: storageError } = await supabase.storage
         .from('documents')
         .upload(storagePath, file)
       if (storageError) throw storageError
+      storageUploaded = true
 
-      const { data: docRow, error: insertError } = await supabase
+      const { data: inserted, error: insertError } = await supabase
         .from('documents')
         .insert({
           person_id: personId,
@@ -58,6 +64,7 @@ export const useDocumentsStore = defineStore('documents', () => {
         .select()
         .single()
       if (insertError) throw insertError
+      docRow = inserted
 
       uploading.value = false
       extracting.value = true
@@ -74,6 +81,10 @@ export const useDocumentsStore = defineStore('documents', () => {
       currentResult.value = result
       return { documentId, result }
     } catch (err) {
+      // Clean up orphaned storage file if upload succeeded but DB insert never completed
+      if (storageUploaded && storagePath && !docRow) {
+        await supabase.storage.from('documents').remove([storagePath]).catch(() => {})
+      }
       uploading.value = false
       extracting.value = false
       error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
@@ -131,13 +142,13 @@ export const useDocumentsStore = defineStore('documents', () => {
 
       if (result.residences.length > 0) {
         const { error: resError } = await supabase.from('residences').insert(
-          result.residences.map(r => ({
+          result.residences.map((r, index) => ({
             person_id: personId,
             location: r.location,
             from_date: r.fromDate ?? null,
             to_date: r.toDate ?? null,
             is_current: r.isCurrent,
-            sort_order: 0,
+            sort_order: index,
           })),
         )
         if (resError) throw resError
@@ -187,6 +198,10 @@ export const useDocumentsStore = defineStore('documents', () => {
         if (milError) throw milError
       }
 
+      // NOTE: Marriages are NOT committed here. The marriage link is created
+      // via RelationshipSuggestions when the editor confirms the spouse relationship.
+      // Marriage dates/places from the extraction are displayed in the review screen
+      // for reference but must be added manually to the marriage record after linking.
       const { error: statusError } = await supabase
         .from('documents')
         .update({ extraction_status: 'committed' })

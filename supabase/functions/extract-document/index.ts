@@ -299,6 +299,10 @@ async function callHaiku(documentText: string): Promise<unknown> {
     if (!RETRIABLE_STATUSES.has(response.status) || attempt === MAX_RETRIES) {
       throw new Error(`Claude API error (${response.status}): ${errBody}`)
     }
+
+    if (response.status === 429) {
+      await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)))
+    }
   }
 }
 
