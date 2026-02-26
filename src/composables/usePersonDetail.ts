@@ -134,6 +134,13 @@ export function usePersonDetail(personId: string) {
       ])
 
       if (personRes.error) throw personRes.error
+      if (residencesRes.error) throw residencesRes.error
+      if (educationRes.error) throw educationRes.error
+      if (occupationsRes.error) throw occupationsRes.error
+      if (militaryRes.error) throw militaryRes.error
+      if (parentsRes.error) throw parentsRes.error
+      if (childrenRes.error) throw childrenRes.error
+      if (marriagesRes.error) throw marriagesRes.error
 
       person.value          = mapPerson(personRes.data)
       residences.value      = (residencesRes.data ?? []).map(mapResidence)
@@ -141,48 +148,54 @@ export function usePersonDetail(personId: string) {
       occupations.value     = (occupationsRes.data ?? []).map(mapOccupation)
       militaryService.value = (militaryRes.data ?? []).map(mapMilitary)
 
-      parents.value = (parentsRes.data ?? []).map((row: Record<string, unknown>) => ({
-        person: mapPersonSummary(row['parent'] as PersonRow),
-        relationship: {
-          id: row['id'] as string,
-          parentId: row['parent_id'] as string,
-          childId: row['child_id'] as string,
-          relationshipType: row['relationship_type'] as ParentChild['relationshipType'],
-          confirmed: row['confirmed'] as boolean,
-          createdAt: row['created_at'] as string,
-        },
-      }))
-
-      children.value = (childrenRes.data ?? []).map((row: Record<string, unknown>) => ({
-        person: mapPersonSummary(row['child'] as PersonRow),
-        relationship: {
-          id: row['id'] as string,
-          parentId: row['parent_id'] as string,
-          childId: row['child_id'] as string,
-          relationshipType: row['relationship_type'] as ParentChild['relationshipType'],
-          confirmed: row['confirmed'] as boolean,
-          createdAt: row['created_at'] as string,
-        },
-      }))
-
-      spouses.value = (marriagesRes.data ?? []).map((row: Record<string, unknown>) => {
-        const spouseRow = (row['person_a_id'] as string) === personId
-          ? row['person_b'] as PersonRow
-          : row['person_a'] as PersonRow
-        return {
-          person: mapPersonSummary(spouseRow),
-          marriage: {
+      parents.value = (parentsRes.data ?? [])
+        .filter((row: Record<string, unknown>) => row['parent'] != null)
+        .map((row: Record<string, unknown>) => ({
+          person: mapPersonSummary(row['parent'] as PersonRow),
+          relationship: {
             id: row['id'] as string,
-            personAId: row['person_a_id'] as string,
-            personBId: row['person_b_id'] as string,
-            marriageDate: row['marriage_date'] as string | null,
-            marriagePlace: row['marriage_place'] as string | null,
-            endDate: row['end_date'] as string | null,
-            endReason: row['end_reason'] as Marriage['endReason'],
+            parentId: row['parent_id'] as string,
+            childId: row['child_id'] as string,
+            relationshipType: row['relationship_type'] as ParentChild['relationshipType'],
+            confirmed: row['confirmed'] as boolean,
             createdAt: row['created_at'] as string,
           },
-        }
-      })
+        }))
+
+      children.value = (childrenRes.data ?? [])
+        .filter((row: Record<string, unknown>) => row['child'] != null)
+        .map((row: Record<string, unknown>) => ({
+          person: mapPersonSummary(row['child'] as PersonRow),
+          relationship: {
+            id: row['id'] as string,
+            parentId: row['parent_id'] as string,
+            childId: row['child_id'] as string,
+            relationshipType: row['relationship_type'] as ParentChild['relationshipType'],
+            confirmed: row['confirmed'] as boolean,
+            createdAt: row['created_at'] as string,
+          },
+        }))
+
+      spouses.value = (marriagesRes.data ?? [])
+        .filter((row: Record<string, unknown>) => row['person_a'] != null && row['person_b'] != null)
+        .map((row: Record<string, unknown>) => {
+          const spouseRow = (row['person_a_id'] as string) === personId
+            ? row['person_b'] as PersonRow
+            : row['person_a'] as PersonRow
+          return {
+            person: mapPersonSummary(spouseRow),
+            marriage: {
+              id: row['id'] as string,
+              personAId: row['person_a_id'] as string,
+              personBId: row['person_b_id'] as string,
+              marriageDate: row['marriage_date'] as string | null,
+              marriagePlace: row['marriage_place'] as string | null,
+              endDate: row['end_date'] as string | null,
+              endReason: row['end_reason'] as Marriage['endReason'],
+              createdAt: row['created_at'] as string,
+            },
+          }
+        })
     } catch (err) {
       const message = err instanceof Error
         ? err.message
