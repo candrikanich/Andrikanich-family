@@ -57,3 +57,54 @@
     @apply text-sm text-red-700 mt-1;
   }
 }
+
+/* ─── Print / PDF Export ──────────────────────────────────────────────────── */
+@media print {
+  /* Hide interactive chrome */
+  header,
+  nav,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset page background */
+  body {
+    background: white !important;
+    color: #3D2B1F !important;
+    font-size: 11pt;
+  }
+
+  /* Full-width content, no padding */
+  .max-w-3xl {
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Cards print flat */
+  .card {
+    border: 1px solid #D4C5A9;
+    box-shadow: none !important;
+    break-inside: avoid;
+    margin-bottom: 12pt;
+    page-break-inside: avoid;
+  }
+
+  /* Don't break headings from their content */
+  h1, h2, h3 {
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
+  /* Lightbox and modals must not print */
+  .fixed {
+    display: none !important;
+  }
+
+  /* Ensure photos print */
+  img {
+    max-width: 100%;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+}
