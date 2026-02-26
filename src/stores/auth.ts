@@ -139,6 +139,16 @@ export const useAuthStore = defineStore('auth', () => {
     if (data) profile.value = mapProfile(data)
   }
 
+  async function linkPerson(personId: string) {
+    if (!profile.value) throw new Error('Not authenticated')
+    const { error: err } = await supabase
+      .from('profiles')
+      .update({ person_id: personId })
+      .eq('id', profile.value.id)
+    if (err) throw err
+    profile.value = { ...profile.value, personId }
+  }
+
   return {
     profile,
     isAuthenticated,
@@ -154,5 +164,6 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     checkAuth,
     refreshProfile,
+    linkPerson,
   }
 })
