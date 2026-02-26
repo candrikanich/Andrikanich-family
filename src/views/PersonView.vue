@@ -7,7 +7,8 @@ import { useAuthStore } from '@/stores/auth'
 import RelationshipPanel from '@/components/RelationshipPanel.vue'
 import PhotoGallery from '@/components/PhotoGallery.vue'
 import PersonForm from '@/components/PersonForm.vue'
-import type { PersonInput } from '@/types'
+import { useEditHistory } from '@/composables/useEditHistory'
+import type { PersonInput, EditHistoryEntry } from '@/types'
 
 const route  = useRoute()
 const id     = route.params.id as string
@@ -18,6 +19,26 @@ const detail = usePersonDetail(id)
 const showEditForm  = ref(false)
 const saveError     = ref<string | null>(null)
 const primaryPhotoId = ref<string | null>(null)
+
+const editHistory = useEditHistory(id)
+const showHistory = ref(false)
+
+async function loadHistory() {
+  if (!showHistory.value) return
+  await editHistory.load()
+}
+
+function formatHistoryValue(val: unknown): string {
+  if (val === null || val === undefined) return '—'
+  if (typeof val === 'string') return val
+  return JSON.stringify(val)
+}
+
+async function handleRestore(entry: EditHistoryEntry) {
+  if (!confirm(`Restore "${entry.fieldName}" to its previous value?`)) return
+  await editHistory.restore(entry)
+  await detail.load()
+}
 
 watch(() => detail.person.value, (p) => {
   if (p) primaryPhotoId.value = p.primaryPhotoId
@@ -185,6 +206,53 @@ function exportPdf() { window.print() }
         class="mb-6"
         @reload="detail.load()"
       />
+
+      <!-- Edit History -->
+      <div v-if="auth.isEditor" class="card p-6 mb-6 print:hidden">
+        <button
+          class="flex items-center justify-between w-full text-left"
+          @click="showHistory = !showHistory; loadHistory()"
+        >
+          <h2 class="font-display text-xl text-walnut">Edit History</h2>
+          <span class="text-walnut-muted text-sm">{{ showHistory ? '▲ Hide' : '▼ Show' }}</span>
+        </button>
+
+        <div v-if="showHistory" class="mt-4">
+          <p v-if="editHistory.isLoading.value" class="text-sm text-walnut-muted">Loading…</p>
+          <p v-else-if="editHistory.error.value" class="error-text">{{ editHistory.error.value }}</p>
+          <p v-else-if="!editHistory.entries.value.length" class="text-sm text-walnut-muted">No edit history yet.</p>
+
+          <div v-else class="divide-y divide-parchment text-sm">
+            <div
+              v-for="entry in editHistory.entries.value"
+              :key="entry.id"
+              class="py-3 flex items-start justify-between gap-4"
+            >
+              <div class="flex-1 min-w-0">
+                <span class="font-medium text-walnut capitalize">{{ entry.fieldName.replace(/_/g, ' ') }}</span>
+                <div class="text-walnut-muted mt-0.5 space-y-0.5">
+                  <div v-if="entry.oldValue !== null">
+                    <span class="text-xs bg-red-50 text-red-700 px-1 rounded line-through">{{ formatHistoryValue(entry.oldValue) }}</span>
+                    →
+                    <span class="text-xs bg-green-50 text-green-700 px-1 rounded">{{ formatHistoryValue(entry.newValue) }}</span>
+                  </div>
+                  <div v-else class="text-xs text-walnut-muted italic">Record created</div>
+                </div>
+                <p class="text-xs text-walnut-muted mt-1">
+                  {{ new Date(entry.changedAt).toLocaleString('en-US') }}
+                </p>
+              </div>
+              <button
+                v-if="auth.isAdmin && entry.oldValue !== null"
+                @click="handleRestore(entry)"
+                class="text-xs btn-secondary flex-shrink-0"
+              >
+                Restore
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Edit modal -->
       <PersonForm
