@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, nextTick } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { VueFlow } from '@vue-flow/core'
 import type { NodeMouseEvent } from '@vue-flow/core'
@@ -50,12 +50,19 @@ const nodes = ref<ReturnType<typeof buildTreeLayout>['nodes']>([])
 const edges = ref<ReturnType<typeof buildTreeLayout>['edges']>([])
 
 async function loadTree(id: string) {
-  await tree.fetchSubgraph(id)
-  if (tree.subgraph) {
-    const layout = buildTreeLayout(tree.subgraph)
-    nodes.value = layout.nodes
-    edges.value = layout.edges
-    setTimeout(() => vueFlowRef.value?.fitView({ padding: 0.2 }), 50)
+  nodes.value = []
+  edges.value = []
+  try {
+    await tree.fetchSubgraph(id)
+    if (tree.subgraph) {
+      const layout = buildTreeLayout(tree.subgraph)
+      nodes.value = layout.nodes
+      edges.value = layout.edges
+      await nextTick()
+      vueFlowRef.value?.fitView({ padding: 0.2 })
+    }
+  } catch {
+    // tree.error is already set by the store
   }
 }
 
@@ -72,20 +79,14 @@ function navigateTo(personId: string) {
 }
 
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
-onMounted(async () => {
-  if (rootId.value) {
-    await loadTree(rootId.value)
-  } else {
-    await openPicker()
-  }
-})
-
 watch(rootId, async (id) => {
   if (id) {
     selectedPersonId.value = null
     await loadTree(id)
+  } else {
+    await openPicker()
   }
-})
+}, { immediate: true })
 </script>
 
 <template>
