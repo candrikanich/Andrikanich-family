@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { usePersonDetail } from '@/composables/usePersonDetail'
 import { usePeopleStore } from '@/stores/people'
 import { useAuthStore } from '@/stores/auth'
 import RelationshipPanel from '@/components/RelationshipPanel.vue'
+import PhotoGallery from '@/components/PhotoGallery.vue'
 import PersonForm from '@/components/PersonForm.vue'
 import type { PersonInput } from '@/types'
 
@@ -14,8 +15,13 @@ const auth   = useAuthStore()
 const people = usePeopleStore()
 const detail = usePersonDetail(id)
 
-const showEditForm = ref(false)
-const saveError    = ref<string | null>(null)
+const showEditForm  = ref(false)
+const saveError     = ref<string | null>(null)
+const primaryPhotoId = ref<string | null>(null)
+
+watch(() => detail.person.value, (p) => {
+  if (p) primaryPhotoId.value = p.primaryPhotoId
+}, { immediate: true })
 
 onMounted(() => detail.load())
 
@@ -38,6 +44,8 @@ function formatDate(d: string | null) {
 function yearOf(d: string | null) {
   return d ? new Date(d).getFullYear() : null
 }
+
+function exportPdf() { window.print() }
 </script>
 
 <template>
@@ -76,9 +84,14 @@ function yearOf(d: string | null) {
               </p>
             </div>
           </div>
-          <button v-if="auth.isEditor" @click="showEditForm = true" class="btn-secondary text-sm flex-shrink-0">
-            Edit
-          </button>
+          <div class="flex gap-2 flex-shrink-0 print:hidden">
+            <button @click="exportPdf" class="btn-secondary text-sm">
+              Export PDF
+            </button>
+            <button v-if="auth.isEditor" @click="showEditForm = true" class="btn-secondary text-sm">
+              Edit
+            </button>
+          </div>
         </div>
       </div>
 
@@ -154,6 +167,14 @@ function yearOf(d: string | null) {
           </div>
         </div>
       </div>
+
+      <!-- Photo gallery -->
+      <PhotoGallery
+        :person-id="id"
+        :primary-photo-id="primaryPhotoId"
+        class="mb-6"
+        @primary-changed="primaryPhotoId = $event"
+      />
 
       <!-- Relationships -->
       <RelationshipPanel
