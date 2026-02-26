@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { usePeopleStore } from '@/stores/people'
 import { useAuthStore } from '@/stores/auth'
 import PersonCard from '@/components/PersonCard.vue'
@@ -33,6 +33,7 @@ function triggerSearch() {
 watch([query, birthYearMin, birthYearMax, location], triggerSearch)
 
 onMounted(() => people.fetchPeople())
+onUnmounted(() => clearTimeout(debounceTimer))
 
 async function handleSave(input: PersonInput) {
   formError.value = null

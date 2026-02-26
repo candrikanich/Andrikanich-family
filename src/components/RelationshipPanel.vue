@@ -23,10 +23,20 @@ const activeTab  = ref<Tab>('parents')
 const showPicker = ref(false)
 const pickerQuery = ref('')
 
+const error     = ref<string | null>(null)
+const isMutating = ref(false)
+
+const alreadyLinkedIds = computed(() => {
+  if (activeTab.value === 'parents')  return new Set(props.parents.map(r => r.person.id))
+  if (activeTab.value === 'children') return new Set(props.children.map(r => r.person.id))
+  return new Set(props.spouses.map(r => r.person.id))
+})
+
 const pickerResults = computed(() =>
   people.list
     .filter(p =>
       p.id !== props.personId &&
+      !alreadyLinkedIds.value.has(p.id) &&
       `${p.firstName} ${p.lastName}`.toLowerCase().includes(pickerQuery.value.toLowerCase())
     )
     .slice(0, 8)
@@ -50,48 +60,93 @@ function switchTab(tab: Tab) {
 }
 
 async function addParent(parent: PersonSummary) {
-  await supabase.from('parent_child').insert({
-    parent_id: parent.id,
-    child_id: props.personId,
-    relationship_type: addRelType.value,
-    confirmed: true,
-  })
-  showPicker.value = false
-  emit('reload')
+  isMutating.value = true
+  error.value = null
+  try {
+    const { error: err } = await supabase.from('parent_child').insert({
+      parent_id: parent.id,
+      child_id: props.personId,
+      relationship_type: addRelType.value,
+      confirmed: true,
+    })
+    if (err) throw err
+    showPicker.value = false
+    emit('reload')
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to add relationship'
+  } finally {
+    isMutating.value = false
+  }
 }
 
 async function addChild(child: PersonSummary) {
-  await supabase.from('parent_child').insert({
-    parent_id: props.personId,
-    child_id: child.id,
-    relationship_type: addRelType.value,
-    confirmed: true,
-  })
-  showPicker.value = false
-  emit('reload')
+  isMutating.value = true
+  error.value = null
+  try {
+    const { error: err } = await supabase.from('parent_child').insert({
+      parent_id: props.personId,
+      child_id: child.id,
+      relationship_type: addRelType.value,
+      confirmed: true,
+    })
+    if (err) throw err
+    showPicker.value = false
+    emit('reload')
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to add relationship'
+  } finally {
+    isMutating.value = false
+  }
 }
 
 async function addSpouse(spouse: PersonSummary) {
-  await supabase.from('marriages').insert({
-    person_a_id: props.personId,
-    person_b_id: spouse.id,
-    marriage_date: addMarriageDate.value || null,
-    marriage_place: addMarriagePlace.value || null,
-    end_reason: (addEndReason.value as MarriageEndReason) || null,
-    end_date: null,
-  })
-  showPicker.value = false
-  emit('reload')
+  isMutating.value = true
+  error.value = null
+  try {
+    const { error: err } = await supabase.from('marriages').insert({
+      person_a_id: props.personId,
+      person_b_id: spouse.id,
+      marriage_date: addMarriageDate.value || null,
+      marriage_place: addMarriagePlace.value || null,
+      end_reason: (addEndReason.value as MarriageEndReason) || null,
+      end_date: null,
+    })
+    if (err) throw err
+    showPicker.value = false
+    emit('reload')
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to add relationship'
+  } finally {
+    isMutating.value = false
+  }
 }
 
 async function removeRelationship(id: string) {
-  await supabase.from('parent_child').delete().eq('id', id)
-  emit('reload')
+  isMutating.value = true
+  error.value = null
+  try {
+    const { error: err } = await supabase.from('parent_child').delete().eq('id', id)
+    if (err) throw err
+    emit('reload')
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to remove relationship'
+  } finally {
+    isMutating.value = false
+  }
 }
 
 async function removeMarriage(id: string) {
-  await supabase.from('marriages').delete().eq('id', id)
-  emit('reload')
+  isMutating.value = true
+  error.value = null
+  try {
+    const { error: err } = await supabase.from('marriages').delete().eq('id', id)
+    if (err) throw err
+    emit('reload')
+  } catch (err) {
+    error.value = err instanceof Error ? err.message : 'Failed to remove marriage'
+  } finally {
+    isMutating.value = false
+  }
 }
 
 function displayName(p: PersonSummary) {
@@ -271,5 +326,7 @@ function displayName(p: PersonSummary) {
         </button>
       </div>
     </div>
+
+    <p v-if="error" class="text-red-600 text-sm mt-3">{{ error }}</p>
   </div>
 </template>

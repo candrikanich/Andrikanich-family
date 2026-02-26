@@ -10,6 +10,10 @@ const auth   = useAuthStore()
 const people = usePeopleStore()
 const router = useRouter()
 
+function sanitize(s: string) {
+  return s.replace(/[,()%_]/g, ' ').trim()
+}
+
 type Step = 'searching' | 'matches' | 'no-match'
 const step      = ref<Step>('searching')
 const matches   = ref<PersonSummary[]>([])
@@ -27,11 +31,13 @@ const newPerson = ref<PersonInput>({
 onMounted(async () => {
   if (!auth.profile) return
   try {
+    const firstName = sanitize(auth.profile.firstName)
+    const lastName  = sanitize(auth.profile.lastName)
+
     const { data, error } = await supabase
       .from('people')
       .select('id, first_name, last_name, birth_surname, nickname, birth_date, death_date, primary_photo_id')
-      .ilike('first_name', `%${auth.profile.firstName}%`)
-      .ilike('last_name', `%${auth.profile.lastName}%`)
+      .or(`first_name.ilike.%${firstName}%,last_name.ilike.%${lastName}%`)
       .limit(5)
 
     if (error) throw error
