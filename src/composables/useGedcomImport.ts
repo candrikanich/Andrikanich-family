@@ -167,7 +167,7 @@ export function useGedcomImport() {
       const { nonConflicts, conflicts } = detectConflicts(people, existing)
       preview.value = { people: nonConflicts, families, conflicts }
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Failed to parse GEDCOM file'
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
       throw err
     } finally {
       isLoading.value = false
@@ -214,12 +214,13 @@ export function useGedcomImport() {
         const wifeDbId = family.wifeGedcomId    ? gedcomIdToDbId.get(family.wifeGedcomId)    : null
 
         if (husbDbId && wifeDbId) {
-          await supabase.from('marriages').insert({
+          const { error: marriageErr } = await supabase.from('marriages').insert({
             person_a_id:    husbDbId,
             person_b_id:    wifeDbId,
             marriage_date:  family.marriageDate,
             marriage_place: family.marriagePlace,
           })
+          if (marriageErr) throw marriageErr
         }
 
         const parentIds = [husbDbId, wifeDbId].filter((id): id is string => id !== null)
@@ -227,12 +228,13 @@ export function useGedcomImport() {
           const childDbId = gedcomIdToDbId.get(childGedcomId)
           if (!childDbId) continue
           for (const parentId of parentIds) {
-            await supabase.from('parent_child').insert({
+            const { error: pcErr } = await supabase.from('parent_child').insert({
               parent_id:         parentId,
               child_id:          childDbId,
               relationship_type: 'biological',
               confirmed:         true,
             })
+            if (pcErr) throw pcErr
           }
         }
       }
@@ -240,7 +242,7 @@ export function useGedcomImport() {
       preview.value = null
       return { created: people.length, skipped: conflicts.length, conflicts }
     } catch (err) {
-      error.value = err instanceof Error ? err.message : 'Import failed'
+      error.value = err instanceof Error ? err.message : (err as { message?: string }).message ?? String(err)
       throw err
     } finally {
       isLoading.value = false
