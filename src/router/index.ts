@@ -77,6 +77,12 @@ const router = createRouter({
       component: () => import('@/views/DocumentReviewView.vue'),
       meta: { requiresEditor: true },
     },
+    {
+      path: '/import/gedcom',
+      name: 'gedcom-import',
+      component: () => import('@/views/GedcomImportView.vue'),
+      meta: { requiresEditor: true },
+    },
 
     // ─── Admin only ───────────────────────────────────────────────────────
     {

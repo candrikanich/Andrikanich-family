@@ -26,6 +26,7 @@ async function handleLogout() {
           <RouterLink to="/tree"   class="text-sm text-walnut-muted hover:text-walnut transition-colors">Tree</RouterLink>
           <RouterLink to="/people" class="text-sm text-walnut-muted hover:text-walnut transition-colors">People</RouterLink>
           <RouterLink v-if="auth.isEditor" to="/upload" class="text-sm text-walnut-muted hover:text-walnut transition-colors">Upload Document</RouterLink>
+          <RouterLink v-if="auth.isEditor" to="/import/gedcom" class="text-sm text-walnut-muted hover:text-walnut transition-colors">Import GEDCOM</RouterLink>
           <RouterLink v-if="auth.isAdmin" to="/admin" class="text-sm text-walnut-muted hover:text-walnut transition-colors">Admin</RouterLink>
 
           <div class="flex items-center gap-3 pl-4 border-l border-parchment">

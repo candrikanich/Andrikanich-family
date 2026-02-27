@@ -9,6 +9,10 @@
         <h2 class="font-display text-lg text-walnut mb-1">Pending Approvals</h2>
         <p class="text-sm text-walnut-muted">Review and approve new family member registrations</p>
       </RouterLink>
+      <RouterLink to="/import/gedcom" class="card p-6 hover:border-walnut-muted transition-colors block">
+        <h2 class="font-display text-lg text-walnut mb-1">Import GEDCOM</h2>
+        <p class="text-sm text-walnut-muted">Bulk-import people and relationships from a .ged file</p>
+      </RouterLink>
     </div>
   </div>
 </template>
