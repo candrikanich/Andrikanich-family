@@ -31,20 +31,30 @@ function onFileChange(e: Event) {
 
 async function onParse() {
   if (!file.value) return
-  await people.fetchPeople()
-  const summaries = people.list.map(p => ({
-    id: p.id, firstName: p.firstName, lastName: p.lastName,
-    birthSurname: p.birthSurname, nickname: p.nickname,
-    birthDate: p.birthDate, deathDate: p.deathDate, primaryPhotoId: p.primaryPhotoId,
-  }))
-  await gedcom.parseFile(file.value, summaries)
-  step.value = 'preview'
+  try {
+    await people.fetchPeople()
+    if (people.error) return  // fetchPeople caught its own error; user stays on upload step
+    const summaries = people.list.map(p => ({
+      id: p.id, firstName: p.firstName, lastName: p.lastName,
+      birthSurname: p.birthSurname, nickname: p.nickname,
+      birthDate: p.birthDate, deathDate: p.deathDate, primaryPhotoId: p.primaryPhotoId,
+    }))
+    await gedcom.parseFile(file.value, summaries)
+    step.value = 'preview'
+  } catch {
+    // gedcom.error.value is populated by parseFile; stay on upload step so error is visible
+  }
 }
 
 async function onImport() {
   step.value = 'importing'
   result.value = await gedcom.runImport(auth.profile!.id)
   step.value = 'done'
+}
+
+function onBack() {
+  gedcom.reset()
+  step.value = 'upload'
 }
 
 function onReset() {
@@ -171,7 +181,7 @@ const progressPct  = computed(() =>
         <button class="btn-primary" @click="onImport">
           Import {{ importCount }} {{ importCount === 1 ? 'person' : 'people' }}
         </button>
-        <button class="btn-secondary" @click="step = 'upload'; gedcom.reset()">Back</button>
+        <button class="btn-secondary" @click="onBack">Back</button>
       </div>
     </div>
 
