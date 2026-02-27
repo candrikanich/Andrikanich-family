@@ -309,3 +309,44 @@ export interface RelationshipSuggestion {
   uncertain: boolean
   matchedPerson?: PersonSummary
 }
+
+// ─── GEDCOM Import ────────────────────────────────────────────────────────────
+
+export interface GedcomImportPerson {
+  gedcomId: string
+  firstName: string
+  lastName: string
+  birthDate: string | null
+  birthPlace: string | null
+  deathDate: string | null
+  deathPlace: string | null
+  burialPlace: string | null
+  notes: string | null
+}
+
+export interface GedcomImportFamily {
+  gedcomId: string
+  husbandGedcomId: string | null
+  wifeGedcomId: string | null
+  childGedcomIds: string[]
+  marriageDate: string | null
+  marriagePlace: string | null
+}
+
+export interface GedcomConflict {
+  gedcomPerson: GedcomImportPerson
+  existingPersonId: string
+  existingPersonName: string
+}
+
+export interface GedcomImportPreview {
+  people: GedcomImportPerson[]     // non-conflicting only
+  families: GedcomImportFamily[]
+  conflicts: GedcomConflict[]
+}
+
+export interface GedcomImportResult {
+  created: number
+  skipped: number
+  conflicts: GedcomConflict[]
+}
