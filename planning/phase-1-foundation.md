@@ -16,7 +16,7 @@ These require clicking in browser dashboards — not code tasks.
 
 ### M1: Create Supabase Project
 1. Go to https://supabase.com → New Project
-2. Name it `genealogy-tracker`, choose a strong DB password, pick region closest to Ohio (US East)
+2. Name it `andrikanich-family`, choose a strong DB password, pick region closest to Ohio (US East)
 3. Wait for provisioning (~2 minutes)
 4. Settings → API → copy `Project URL` and `anon public` key
 5. Create `.env.local` in project root:
@@ -29,7 +29,7 @@ VITE_APP_TITLE=Andrikanich Family
 ### M2: Create Resend Account
 1. Go to https://resend.com → sign up with your email
 2. Domains → Add Domain → add `andrikanichfamily.com` → follow DNS instructions
-3. API Keys → Create API Key → name it `genealogy-tracker-prod`
+3. API Keys → Create API Key → name it `andrikanich-family-prod`
 4. Copy the key (shown once only)
 
 ### M3: Create Storage Buckets in Supabase

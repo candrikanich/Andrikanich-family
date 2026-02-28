@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Development guidelines for genealogy-tracker project.
+Development guidelines for Andrikanich Family project.
 
 ## Commands
 
