@@ -2,15 +2,17 @@
 
 A Vue 3 web application for organizing, tracking, and sharing family genealogy records with edit history and document management.
 
-## Features (MVP)
+## Features
 
 - **Family Records**: Store information about family members (birth dates, locations, bios)
 - **Profile Photos & Documents**: Upload and organize family photos and PDF documents per person
-- **Visual Family Tree**: Interactive tree visualization to see relationships at a glance
+- **Document AI Extraction**: Upload Word/PDF documents; AI extracts structured data with a review screen
+- **Visual Family Tree**: Interactive tree visualization to see relationships
+- **GEDCOM Import**: Bulk-import people and relationships from standard genealogy files
 - **Search & Filter**: Find family members by name, date range, or location
-- **Edit History**: Track who made changes and when
-- **User Authentication**: Viewer and Editor roles for permission control
-- **PDF Export**: Generate reports of individual family member records
+- **Edit History**: Track changes with admin restore; automatic triggers on related tables
+- **User Authentication**: Invite-gated registration with Admin, Editor, and Viewer roles
+- **PDF Export**: Generate reports via print CSS
 
 ## Tech Stack
 
@@ -19,7 +21,7 @@ A Vue 3 web application for organizing, tracking, and sharing family genealogy r
 - **Styling**: TailwindCSS
 - **Backend**: Supabase (PostgreSQL, Auth, Storage)
 - **Testing**: Vitest + Vue Test Utils
-- **Deployment**: Netlify
+- **Deployment**: Vercel
 
 ## Quick Start
 
@@ -203,15 +205,16 @@ npm run test:coverage # Generate coverage report
 
 ## Next Steps
 
-- [ ] Create login/signup views
-- [ ] Build person card components
-- [ ] Implement family tree visualization
-- [ ] Add search and filter functionality
-- [ ] Create edit form for family records
-- [ ] Implement document upload
-- [ ] Add PDF export feature
-- [ ] Write comprehensive tests
-- [ ] Deploy to Netlify
+- [x] Create login/signup views
+- [x] Build person card components
+- [x] Implement family tree visualization
+- [x] Add search and filter functionality
+- [x] Create edit form for family records
+- [x] Implement document upload (AI extraction, review screen)
+- [x] Add PDF export feature
+- [x] Photo gallery and edit history
+- [x] GEDCOM import
+- [ ] Deploy to Vercel
 
 ## Contributing
 

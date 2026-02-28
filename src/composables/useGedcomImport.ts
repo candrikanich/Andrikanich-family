@@ -25,10 +25,10 @@ export function parseName(raw: string): { firstName: string; lastName: string } 
   // Standard format: "First Middle /Surname/" (trailing slash optional)
   const match = raw.match(/^([^/]*)\s*\/([^/]*)\/?\s*(.*)$/)
   if (match) {
-    const before  = match[1].trim()
-    const surname = match[2].trim()
-    // If nothing before the slash, the first name may be after the closing slash
-    return { firstName: before || match[3].trim(), lastName: surname }
+    const before  = (match[1] ?? '').trim()
+    const surname = (match[2] ?? '').trim()
+    const after   = (match[3] ?? '').trim()
+    return { firstName: before || after, lastName: surname }
   }
   const parts = raw.trim().split(/\s+/)
   return { firstName: parts[0] ?? '', lastName: parts.slice(1).join(' ') }
@@ -46,21 +46,21 @@ export function parseGedcomDate(raw: string | null | undefined): string | null {
 
   // "D MON YYYY" or "DD MON YYYY"
   const full = cleaned.match(/^(\d{1,2})\s+([A-Z]{3})\s+(\d{4})$/i)
-  if (full) {
+  if (full && full[1] && full[2] && full[3]) {
     const month = MONTH_MAP[full[2].toUpperCase()] ?? '01'
     return `${full[3]}-${month}-${full[1].padStart(2, '0')}`
   }
 
   // "MON YYYY"
   const monthYear = cleaned.match(/^([A-Z]{3})\s+(\d{4})$/i)
-  if (monthYear) {
+  if (monthYear && monthYear[1] && monthYear[2]) {
     const month = MONTH_MAP[monthYear[1].toUpperCase()] ?? '01'
     return `${monthYear[2]}-${month}-01`
   }
 
   // "YYYY"
   const year = cleaned.match(/^(\d{4})$/)
-  if (year) return `${year[1]}-01-01`
+  if (year && year[1]) return `${year[1]}-01-01`
 
   return null
 }
@@ -160,8 +160,9 @@ export function useGedcomImport() {
     isLoading.value = true
     error.value = null
     try {
-      const text     = await file.text()
-      const records  = parse(text) as GedcomRecord[]
+      const text    = await file.text()
+      const parsed  = parse(text) as unknown
+      const records = (Array.isArray(parsed) ? parsed : (parsed as { tree: GedcomRecord[] }).tree) as GedcomRecord[]
       const people   = gedcomRecordsToPeople(records)
       const families = gedcomRecordsToFamilies(records)
       const { nonConflicts, conflicts } = detectConflicts(people, existing)
@@ -192,6 +193,10 @@ export function useGedcomImport() {
           .insert({
             first_name:    person.firstName,
             last_name:     person.lastName,
+            birth_surname: null,
+            nickname:      null,
+            suffix:        null,
+            biography:     null,
             birth_date:    person.birthDate,
             birth_place:   person.birthPlace,
             death_date:    person.deathDate,
@@ -215,11 +220,13 @@ export function useGedcomImport() {
 
         if (husbDbId && wifeDbId) {
           const { error: marriageErr } = await supabase.from('marriages').insert({
-            person_a_id:    husbDbId,
-            person_b_id:    wifeDbId,
-            marriage_date:  family.marriageDate,
+            person_a_id:   husbDbId,
+            person_b_id:   wifeDbId,
+            marriage_date: family.marriageDate,
             marriage_place: family.marriagePlace,
-          })
+            end_date:      null,
+            end_reason:    null,
+          } as const)
           if (marriageErr) throw marriageErr
         }
 
@@ -229,10 +236,10 @@ export function useGedcomImport() {
           if (!childDbId) continue
           for (const parentId of parentIds) {
             const { error: pcErr } = await supabase.from('parent_child').insert({
-              parent_id:         parentId,
-              child_id:          childDbId,
-              relationship_type: 'biological',
-              confirmed:         true,
+              parent_id: parentId,
+              child_id: childDbId,
+              relationship_type: 'biological' as const,
+              confirmed: true,
             })
             if (pcErr) throw pcErr
           }
